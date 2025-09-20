@@ -42,6 +42,9 @@ class FlashcardController extends Controller
                 abort(401);
             }
 
+            // Load subject relationship to prevent N+1 query
+            $unit->load('subject');
+
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 abort(403);
             }
@@ -92,7 +95,7 @@ class FlashcardController extends Controller
 
             if ($isTopicBased) {
                 // Topic-based flashcard listing
-                $topic = Topic::findOrFail($topicId);
+                $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
                 if ((int) $topic->unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
@@ -118,7 +121,7 @@ class FlashcardController extends Controller
                 ]);
             } else {
                 // Unit-based flashcard listing (backward compatibility)
-                $unit = Unit::findOrFail($unitId);
+                $unit = Unit::with(['subject'])->findOrFail($unitId);
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
@@ -185,14 +188,14 @@ class FlashcardController extends Controller
 
             if ($isTopicBased) {
                 // Topic-based flashcard creation
-                $topic = Topic::findOrFail($topicId);
+                $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
                 $unit = $topic->unit;
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
             } else {
                 // Unit-based flashcard creation (backward compatibility)
-                $unit = Unit::findOrFail($unitId);
+                $unit = Unit::with(['subject'])->findOrFail($unitId);
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
@@ -292,23 +295,23 @@ class FlashcardController extends Controller
 
             if ($isTopicBased) {
                 // Topic-based flashcard access
-                $topic = Topic::findOrFail($topicId);
+                $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
                 $unit = $topic->unit;
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
-                $flashcard = Flashcard::where('topic_id', $topicId)
+                $flashcard = Flashcard::with(['topic.unit.subject'])->where('topic_id', $topicId)
                     ->where('id', $flashcardId)
                     ->firstOrFail();
             } else {
                 // Unit-based flashcard access (backward compatibility)
-                $unit = Unit::findOrFail($unitId);
+                $unit = Unit::with(['subject'])->findOrFail($unitId);
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
-                $flashcard = Flashcard::where('unit_id', $unitId)
+                $flashcard = Flashcard::with(['topic.unit.subject'])->where('unit_id', $unitId)
                     ->where('id', $flashcardId)
                     ->firstOrFail();
             }
@@ -366,23 +369,23 @@ class FlashcardController extends Controller
 
             if ($isTopicBased) {
                 // Topic-based flashcard update
-                $topic = Topic::findOrFail($topicId);
+                $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
                 $unit = $topic->unit;
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
-                $flashcard = Flashcard::where('topic_id', $topicId)
+                $flashcard = Flashcard::with(['topic.unit.subject'])->where('topic_id', $topicId)
                     ->where('id', $flashcardId)
                     ->firstOrFail();
             } else {
                 // Unit-based flashcard update (backward compatibility)
-                $unit = Unit::findOrFail($unitId);
+                $unit = Unit::with(['subject'])->findOrFail($unitId);
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
-                $flashcard = Flashcard::where('unit_id', $unitId)
+                $flashcard = Flashcard::with(['topic.unit.subject'])->where('unit_id', $unitId)
                     ->where('id', $flashcardId)
                     ->firstOrFail();
             }
@@ -395,7 +398,7 @@ class FlashcardController extends Controller
 
                 // Validate the new topic belongs to the same unit or user's units
                 if ($newTopicId !== null) {
-                    $newTopic = Topic::findOrFail($newTopicId);
+                    $newTopic = Topic::with(['unit.subject'])->findOrFail($newTopicId);
                     if ((int) $newTopic->unit->subject->user_id !== auth()->id()) {
                         return response()->json(['error' => 'Invalid topic assignment'], 403);
                     }
@@ -488,23 +491,23 @@ class FlashcardController extends Controller
 
             if ($isTopicBased) {
                 // Topic-based flashcard deletion
-                $topic = Topic::findOrFail($topicId);
+                $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
                 $unit = $topic->unit;
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
-                $flashcard = Flashcard::where('topic_id', $topicId)
+                $flashcard = Flashcard::with(['topic.unit.subject'])->where('topic_id', $topicId)
                     ->where('id', $flashcardId)
                     ->firstOrFail();
             } else {
                 // Unit-based flashcard deletion (backward compatibility)
-                $unit = Unit::findOrFail($unitId);
+                $unit = Unit::with(['subject'])->findOrFail($unitId);
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
-                $flashcard = Flashcard::where('unit_id', $unitId)
+                $flashcard = Flashcard::with(['topic.unit.subject'])->where('unit_id', $unitId)
                     ->where('id', $flashcardId)
                     ->firstOrFail();
             }
@@ -559,23 +562,25 @@ class FlashcardController extends Controller
 
             if ($isTopicBased) {
                 // Topic-based flashcard restore
-                $topic = Topic::findOrFail($topicId);
+                $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
                 if ((int) $topic->unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
                 $flashcard = Flashcard::withTrashed()
+                    ->with(['topic.unit.subject'])
                     ->where('topic_id', $topicId)
                     ->where('id', $flashcardId)
                     ->firstOrFail();
             } else {
                 // Unit-based flashcard restore (backward compatibility)
-                $unit = Unit::findOrFail($unitId);
+                $unit = Unit::with(['subject'])->findOrFail($unitId);
                 if ((int) $unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
                 $flashcard = Flashcard::withTrashed()
+                    ->with(['topic.unit.subject'])
                     ->where('unit_id', $unitId)
                     ->whereNull('topic_id')
                     ->where('id', $flashcardId)
@@ -612,12 +617,13 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
 
             $flashcard = Flashcard::withTrashed()
+                ->with(['topic.unit.subject'])
                 ->where('unit_id', $unitId)
                 ->where('id', $flashcardId)
                 ->firstOrFail();
@@ -651,7 +657,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -693,7 +699,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -738,7 +744,7 @@ class FlashcardController extends Controller
             }
 
             // Verify topic exists and user has access
-            $topic = Topic::findOrFail($topicId);
+            $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
             if ((int) $topic->unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -797,7 +803,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -828,7 +834,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -857,12 +863,12 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
 
-            $flashcard = Flashcard::where('unit_id', $unitId)
+            $flashcard = Flashcard::with(['topic.unit.subject'])->where('unit_id', $unitId)
                 ->where('id', $flashcardId)
                 ->firstOrFail();
 
@@ -892,7 +898,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -954,12 +960,12 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
 
-            $flashcard = Flashcard::where('unit_id', $unitId)
+            $flashcard = Flashcard::with(['topic.unit.subject'])->where('unit_id', $unitId)
                 ->where('id', $flashcardId)
                 ->firstOrFail();
 
@@ -1035,12 +1041,12 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
 
-            $flashcard = Flashcard::where('unit_id', $unitId)
+            $flashcard = Flashcard::with(['topic.unit.subject'])->where('unit_id', $unitId)
                 ->where('id', $flashcardId)
                 ->firstOrFail();
 
@@ -1085,7 +1091,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1118,7 +1124,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1220,7 +1226,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1296,7 +1302,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1337,7 +1343,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1418,7 +1424,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -1504,7 +1510,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1568,7 +1574,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1609,7 +1615,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1693,7 +1699,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -1779,7 +1785,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
@@ -1815,7 +1821,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -1980,7 +1986,7 @@ class FlashcardController extends Controller
                 return response('Unauthorized', 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
 
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Forbidden', 403);
@@ -2008,7 +2014,7 @@ class FlashcardController extends Controller
                 return response('Unauthorized', 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
 
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Forbidden', 403);
@@ -2090,7 +2096,7 @@ class FlashcardController extends Controller
                 return response('Unauthorized', 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
 
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Forbidden', 403);
@@ -2144,7 +2150,7 @@ class FlashcardController extends Controller
                 return response('Unauthorized', 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
 
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response('Forbidden', 403);
@@ -2294,7 +2300,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
 
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Forbidden'], 403);
@@ -2450,7 +2456,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $topic = Topic::findOrFail($topicId);
+            $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
             if ((int) $topic->unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2505,7 +2511,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $topic = Topic::findOrFail($topicId);
+            $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
             if ((int) $topic->unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2548,7 +2554,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $topic = Topic::findOrFail($topicId);
+            $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
             if ((int) $topic->unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2561,50 +2567,50 @@ class FlashcardController extends Controller
                 'target_unit_id' => 'nullable|integer|exists:units,id',
             ]);
 
-            $flashcards = Flashcard::whereIn('id', $validated['flashcard_ids'])
-                ->where('topic_id', $topicId)
-                ->get();
+            // Get base query for flashcards
+            $baseQuery = Flashcard::whereIn('id', $validated['flashcard_ids'])
+                ->where('topic_id', $topicId);
 
             $updatedCount = 0;
             $operation = $validated['operation'];
 
-            foreach ($flashcards as $flashcard) {
-                switch ($operation) {
-                    case 'activate':
-                        $flashcard->update(['is_active' => true]);
-                        $updatedCount++;
-                        break;
-                    case 'deactivate':
-                        $flashcard->update(['is_active' => false]);
-                        $updatedCount++;
-                        break;
-                    case 'delete':
-                        $flashcard->delete();
-                        $updatedCount++;
-                        break;
-                    case 'move':
-                        if (isset($validated['target_topic_id']) || isset($validated['target_unit_id'])) {
-                            $updateData = [];
-                            if ($validated['target_topic_id']) {
-                                $targetTopic = Topic::find($validated['target_topic_id']);
-                                if ($targetTopic && $targetTopic->unit->subject->user_id === auth()->id()) {
-                                    $updateData['topic_id'] = $validated['target_topic_id'];
-                                    $updateData['unit_id'] = $targetTopic->unit_id;
-                                }
-                            } else {
-                                $targetUnit = Unit::find($validated['target_unit_id']);
-                                if ($targetUnit && $targetUnit->subject->user_id === auth()->id()) {
-                                    $updateData['topic_id'] = null;
-                                    $updateData['unit_id'] = $validated['target_unit_id'];
-                                }
+            // Use bulk operations instead of foreach to prevent N+1 queries
+            switch ($operation) {
+                case 'activate':
+                    $updatedCount = $baseQuery->update(['is_active' => true]);
+                    break;
+
+                case 'deactivate':
+                    $updatedCount = $baseQuery->update(['is_active' => false]);
+                    break;
+
+                case 'delete':
+                    $updatedCount = $baseQuery->delete();
+                    break;
+
+                case 'move':
+                    if (isset($validated['target_topic_id']) || isset($validated['target_unit_id'])) {
+                        $updateData = [];
+
+                        if ($validated['target_topic_id']) {
+                            $targetTopic = Topic::with(['unit.subject'])->find($validated['target_topic_id']);
+                            if ($targetTopic && $targetTopic->unit->subject->user_id === auth()->id()) {
+                                $updateData['topic_id'] = $validated['target_topic_id'];
+                                $updateData['unit_id'] = $targetTopic->unit_id;
                             }
-                            if (! empty($updateData)) {
-                                $flashcard->update($updateData);
-                                $updatedCount++;
+                        } else {
+                            $targetUnit = Unit::with(['subject'])->find($validated['target_unit_id']);
+                            if ($targetUnit && $targetUnit->subject->user_id === auth()->id()) {
+                                $updateData['topic_id'] = null;
+                                $updateData['unit_id'] = $validated['target_unit_id'];
                             }
                         }
-                        break;
-                }
+
+                        if (! empty($updateData)) {
+                            $updatedCount = $baseQuery->update($updateData);
+                        }
+                    }
+                    break;
             }
 
             // Invalidate cache
@@ -2655,7 +2661,7 @@ class FlashcardController extends Controller
             }
 
             // Verify unit exists and user has access
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2704,7 +2710,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2745,7 +2751,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2810,7 +2816,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2842,7 +2848,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2875,7 +2881,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
@@ -2905,7 +2911,7 @@ class FlashcardController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $unit = Unit::findOrFail($unitId);
+            $unit = Unit::with(['subject'])->findOrFail($unitId);
             if ((int) $unit->subject->user_id !== auth()->id()) {
                 return response()->json(['error' => 'Access denied'], 403);
             }

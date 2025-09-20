@@ -1274,7 +1274,11 @@ class TopicController extends Controller
                 'chunk_index' => 'required|integer|min:0',
             ]);
 
-            $sessionId = basename($validated['session_id']); // Sanitize to prevent path traversal
+            // Validate session_id to prevent path traversal - only allow alphanumeric, underscore, and dash
+            if (! preg_match('/^[a-zA-Z0-9_-]+$/', $validated['session_id'])) {
+                return response()->json(['error' => 'Invalid session ID format'], 400);
+            }
+            $sessionId = $validated['session_id'];
             $chunkIndex = $validated['chunk_index'];
             $chunkFile = $validated['chunk'];
 
@@ -1349,7 +1353,11 @@ class TopicController extends Controller
                 'session_id' => 'required|string',
             ]);
 
-            $sessionId = basename($validated['session_id']); // Sanitize to prevent path traversal
+            // Validate session_id to prevent path traversal - only allow alphanumeric, underscore, and dash
+            if (! preg_match('/^[a-zA-Z0-9_-]+$/', $validated['session_id'])) {
+                return response()->json(['error' => 'Invalid session ID format'], 400);
+            }
+            $sessionId = $validated['session_id'];
 
             // Load session data
             $sessionPath = storage_path("app/temp/chunks/{$sessionId}/session.json");
@@ -1373,21 +1381,49 @@ class TopicController extends Controller
                 ], 400);
             }
 
-            // Assemble file from chunks
+            // Assemble file from chunks using memory-efficient streaming
             $assembledFilePath = storage_path("app/temp/assembled_{$sessionId}");
             $assembledFile = fopen($assembledFilePath, 'wb');
+            $bufferSize = 8192; // 8KB buffer for optimal memory usage
 
-            for ($i = 0; $i < $sessionData['total_chunks']; $i++) {
-                $chunkPath = storage_path("app/temp/chunks/{$sessionId}/chunk_{$i}");
-                if (! file_exists($chunkPath)) {
-                    fclose($assembledFile);
+            try {
+                for ($i = 0; $i < $sessionData['total_chunks']; $i++) {
+                    $chunkPath = storage_path("app/temp/chunks/{$sessionId}/chunk_{$i}");
+                    if (! file_exists($chunkPath)) {
+                        throw new \Exception("Missing chunk {$i}");
+                    }
+
+                    // Stream chunk data instead of loading into memory
+                    $chunkFile = fopen($chunkPath, 'rb');
+                    if ($chunkFile === false) {
+                        throw new \Exception("Cannot open chunk {$i}");
+                    }
+
+                    try {
+                        // Read and write chunk in small buffers to minimize memory usage
+                        while (! feof($chunkFile)) {
+                            $buffer = fread($chunkFile, $bufferSize);
+                            if ($buffer === false) {
+                                throw new \Exception("Error reading chunk {$i}");
+                            }
+                            if (strlen($buffer) > 0) {
+                                $written = fwrite($assembledFile, $buffer);
+                                if ($written === false) {
+                                    throw new \Exception('Error writing assembled file');
+                                }
+                            }
+                        }
+                    } finally {
+                        fclose($chunkFile);
+                    }
+                }
+            } catch (\Exception $e) {
+                fclose($assembledFile);
+                if (file_exists($assembledFilePath)) {
                     unlink($assembledFilePath);
-
-                    return response()->json(['error' => "Missing chunk {$i}"], 400);
                 }
 
-                $chunkData = file_get_contents($chunkPath);
-                fwrite($assembledFile, $chunkData);
+                return response()->json(['error' => $e->getMessage()], 400);
             }
 
             fclose($assembledFile);
@@ -1476,7 +1512,12 @@ class TopicController extends Controller
     private function cleanupChunkedUploadSession(string $sessionId)
     {
         try {
-            $sessionId = basename($sessionId); // Sanitize to prevent path traversal
+            // Validate session_id to prevent path traversal - only allow alphanumeric, underscore, and dash
+            if (! preg_match('/^[a-zA-Z0-9_-]+$/', $sessionId)) {
+                Log::warning('Invalid session ID format in cleanup: '.$sessionId);
+
+                return; // Silently return for invalid session IDs in cleanup
+            }
             $sessionDir = storage_path("app/temp/chunks/{$sessionId}");
             $assembledFile = storage_path("app/temp/assembled_{$sessionId}");
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $id
@@ -110,13 +111,12 @@ class Unit extends Model
 
     /**
      * Get all flashcards for this unit (both direct unit flashcards and through topics).
+     * This is a proper Eloquent relationship that supports withCount().
      */
-    public function allFlashcards()
+    public function allFlashcards(): HasMany
     {
-        return Flashcard::where(function ($query) {
-            $query->where('unit_id', $this->id)
-                ->where('is_active', true);
-        });
+        return $this->hasMany(Flashcard::class, 'unit_id')
+            ->where('is_active', true);
     }
 
     /**
@@ -138,10 +138,14 @@ class Unit extends Model
 
     /**
      * Compatibility methods for existing controllers
+     * Includes flashcard counts to prevent N+1 queries when accessing getAllFlashcardsCount()
      */
     public static function forSubject(int $subjectId, $supabase = null): Collection
     {
-        return self::where('subject_id', $subjectId)->orderBy('target_completion_date')->get();
+        return self::where('subject_id', $subjectId)
+            ->withCount('allFlashcards')
+            ->orderBy('target_completion_date')
+            ->get();
     }
 
     // Override find to support string IDs for compatibility
@@ -162,10 +166,52 @@ class Unit extends Model
 
     /**
      * Get count of all flashcards (both direct unit flashcards and through topics)
+     * This method now uses the proper relationship for efficient counting.
+     * For bulk operations on collections, use Unit::withCount('allFlashcards') instead.
      */
     public function getAllFlashcardsCount(): int
     {
+        // Check if the count was already loaded via withCount('allFlashcards')
+        if (isset($this->attributes['all_flashcards_count'])) {
+            return (int) $this->attributes['all_flashcards_count'];
+        }
+
+        // Use the relationship for single instance access
         return $this->allFlashcards()->count();
+    }
+
+    /**
+     * Efficiently get flashcard counts for multiple units using a single query.
+     * This prevents N+1 queries when working with collections of units.
+     *
+     * @param  \Illuminate\Database\Eloquent\Collection|\Illuminate\Support\Collection  $units
+     * @return array Array keyed by unit_id with flashcard counts as values
+     */
+    public static function getFlashcardCountsForUnits($units): array
+    {
+        if ($units->isEmpty()) {
+            return [];
+        }
+
+        $unitIds = $units->pluck('id')->toArray();
+
+        // Single query to get all flashcard counts by unit
+        $counts = DB::table('flashcards')
+            ->select('unit_id', DB::raw('COUNT(*) as count'))
+            ->whereIn('unit_id', $unitIds)
+            ->where('is_active', true)
+            ->whereNull('deleted_at')
+            ->groupBy('unit_id')
+            ->pluck('count', 'unit_id')
+            ->toArray();
+
+        // Ensure all units have a count (default to 0 for units with no flashcards)
+        $result = [];
+        foreach ($unitIds as $unitId) {
+            $result[$unitId] = $counts[$unitId] ?? 0;
+        }
+
+        return $result;
     }
 
     /**
@@ -381,6 +427,13 @@ class Unit extends Model
         return (int) now()->diffInDays($this->target_completion_date, false);
     }
 
+    /**
+     * Convert the model instance to an array.
+     *
+     * Note: This method calls getAllFlashcardsCount() which may cause N+1 queries
+     * when serializing collections. For collections, consider using:
+     * Unit::withCount('allFlashcards')->get() before serialization.
+     */
     public function toArray(): array
     {
         return [

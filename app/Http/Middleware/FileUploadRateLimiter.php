@@ -162,6 +162,16 @@ class FileUploadRateLimiter
             ];
         }
 
+        // Check for suspicious activity penalty (IP-based)
+        $ipAddress = $request->ip();
+        $suspiciousIpKey = 'suspicious_activity:'.$ipAddress;
+        if (RateLimiter::tooManyAttempts($suspiciousIpKey, 1)) {
+            return [
+                'allowed' => false,
+                'reason' => 'Access temporarily restricted due to suspicious activity. Please try again later.',
+            ];
+        }
+
         return ['allowed' => true];
     }
 
@@ -303,8 +313,21 @@ class FileUploadRateLimiter
             // Medium risk - require additional verification
             return $this->blockRequest('Additional verification required. Please try again later.', 429);
         } else {
-            // Low risk - allow but add delay
-            sleep(2); // Add 2-second delay
+            // Low risk - apply rate limiting penalty without blocking server process
+            $ipAddress = $request->ip();
+            $suspiciousIpKey = 'suspicious_activity:'.$ipAddress;
+
+            // Penalize this IP for 60 seconds by reducing their rate limit
+            RateLimiter::hit($suspiciousIpKey, 60); // 60 second penalty
+
+            // Log the suspicious activity penalty
+            Log::info('Rate limiting penalty applied for suspicious activity', [
+                'ip' => $ipAddress,
+                'user_id' => $request->user()?->id,
+                'risk_score' => $suspiciousActivity['risk_score'],
+                'indicators' => $suspiciousActivity['indicators'],
+                'penalty_duration' => 60,
+            ]);
 
             return response()->json([
                 'warning' => 'Upload activity is being monitored for security.',

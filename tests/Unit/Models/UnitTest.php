@@ -330,4 +330,47 @@ class UnitTest extends TestCase
         // Verify reasonable performance (should be under 100ms for this dataset)
         $this->assertLessThan(0.1, $endTime - $startTime);
     }
+
+    public function test_unit_with_count_avoids_n_plus_one_queries(): void
+    {
+        // Create multiple units with flashcards
+        $units = collect();
+        for ($i = 0; $i < 3; $i++) {
+            $unit = Unit::factory()->create(['subject_id' => $this->subject->id]);
+            Flashcard::factory()->count(rand(2, 5))->forUnit($unit)->create();
+            $units->push($unit);
+        }
+
+        // Test 1: Verify withCount() works
+        $unitsWithCount = Unit::where('subject_id', $this->subject->id)
+            ->withCount('allFlashcards')
+            ->get();
+
+        foreach ($unitsWithCount as $unit) {
+            // Verify that the count attribute is set
+            $this->assertArrayHasKey('all_flashcards_count', $unit->getAttributes());
+
+            // Verify getAllFlashcardsCount() uses the preloaded count
+            $countFromMethod = $unit->getAllFlashcardsCount();
+            $countFromAttribute = $unit->all_flashcards_count;
+
+            $this->assertEquals($countFromAttribute, $countFromMethod);
+            $this->assertGreaterThanOrEqual(0, $countFromMethod);
+        }
+
+        // Test 2: Verify static bulk method works
+        $unitsForBulk = Unit::where('subject_id', $this->subject->id)->get();
+        $bulkCounts = Unit::getFlashcardCountsForUnits($unitsForBulk);
+
+        $this->assertCount($unitsForBulk->count(), $bulkCounts);
+
+        foreach ($unitsForBulk as $unit) {
+            $this->assertArrayHasKey($unit->id, $bulkCounts);
+            $this->assertEquals($unit->getAllFlashcardsCount(), $bulkCounts[$unit->id]);
+        }
+
+        // Test 3: Test empty collection handling
+        $emptyCounts = Unit::getFlashcardCountsForUnits(collect());
+        $this->assertEmpty($emptyCounts);
+    }
 }
