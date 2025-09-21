@@ -114,7 +114,11 @@ What is the largest planet?\tJupiter";
     public function test_validates_mnemosyne_file(): void
     {
         // Create a temporary XML file
-        $tempFile = tmpfile();
+        $tempDir = storage_path('app/temp');
+        if (! file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+        $tempPath = $tempDir.'/test_mnemosyne_'.uniqid().'.xml';
         $xmlContent = '<?xml version="1.0" encoding="UTF-8"?>
 <mnemosyne>
     <card>
@@ -122,10 +126,10 @@ What is the largest planet?\tJupiter";
         <answer>Test answer</answer>
     </card>
 </mnemosyne>';
-        fwrite($tempFile, $xmlContent);
+        file_put_contents($tempPath, $xmlContent);
 
         $uploadedFile = new UploadedFile(
-            stream_get_meta_data($tempFile)['uri'],
+            $tempPath,
             'test.xml',
             'application/xml',
             null,
@@ -137,16 +141,20 @@ What is the largest planet?\tJupiter";
         $this->assertTrue($validation['valid']);
         $this->assertEquals('xml', $validation['extension']);
 
-        fclose($tempFile);
+        unlink($tempPath);
     }
 
     public function test_rejects_invalid_file_extension(): void
     {
-        $tempFile = tmpfile();
-        fwrite($tempFile, 'Some content');
+        $tempDir = storage_path('app/temp');
+        if (! file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+        $tempPath = $tempDir.'/test_invalid_'.uniqid().'.txt';
+        file_put_contents($tempPath, 'Some content');
 
         $uploadedFile = new UploadedFile(
-            stream_get_meta_data($tempFile)['uri'],
+            $tempPath,
             'test.txt',
             'text/plain',
             null,
@@ -158,7 +166,7 @@ What is the largest planet?\tJupiter";
         $this->assertFalse($validation['valid']);
         $this->assertStringContainsString('extension', $validation['error']);
 
-        fclose($tempFile);
+        unlink($tempPath);
     }
 
     public function test_extracts_categories(): void

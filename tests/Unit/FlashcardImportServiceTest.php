@@ -4,9 +4,9 @@ namespace Tests\Unit;
 
 use App\Services\FlashcardImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Helpers\FileTestHelper;
 use Tests\TestCase;
 
 class FlashcardImportServiceTest extends TestCase
@@ -145,12 +145,15 @@ class FlashcardImportServiceTest extends TestCase
     public function test_parses_file_upload()
     {
         $content = "What is the capital of France?\tParis\nWhat is 2+2?\t4";
-        $file = UploadedFile::fake()->createWithContent('flashcards.csv', $content);
+        $file = FileTestHelper::createUploadedFileWithContent('flashcards.csv', $content, 'text/csv');
 
         $result = $this->service->parseFile($file);
 
         $this->assertTrue($result['success']);
         $this->assertCount(2, $result['cards']);
+
+        // Clean up
+        unlink($file->getPathname());
     }
 
     #[Test]

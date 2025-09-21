@@ -294,7 +294,11 @@ class FlashcardExportServiceTest extends TestCase
         $this->assertStringEndsWith('.apkg', $result['filename']);
 
         // Write content to temporary file to verify ZIP structure
-        $tempFile = tempnam(sys_get_temp_dir(), 'anki_test_');
+        $tempDir = storage_path('app/temp');
+        if (! file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+        $tempFile = $tempDir.'/anki_test_'.uniqid().'.zip';
         file_put_contents($tempFile, $result['content']);
 
         $zip = new ZipArchive;

@@ -10,6 +10,7 @@ use App\Services\FlashcardImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Helpers\FileTestHelper;
 use Tests\TestCase;
 
 class FlashcardImportServiceTest extends TestCase
@@ -310,13 +311,16 @@ class FlashcardImportServiceTest extends TestCase
     public function it_processes_file_upload()
     {
         $content = "What is 2+2?\t4\nWhat is 3+3?\t6";
-        $file = UploadedFile::fake()->createWithContent('test.tsv', $content);
+        $file = FileTestHelper::createUploadedFileWithContent('test.tsv', $content, 'text/tab-separated-values');
 
         $result = $this->importService->parseFile($file);
 
         $this->assertTrue($result['success']);
         $this->assertCount(2, $result['cards']);
         $this->assertEquals("\t", $result['delimiter']);
+
+        // Clean up
+        unlink($file->getPathname());
     }
 
     #[Test]

@@ -274,15 +274,18 @@ class SecurityServiceTest extends TestCase
     {
         // Test with a real PNG signature
         $pngData = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-        $tempFile = tmpfile();
-        fwrite($tempFile, $pngData);
-        $tempPath = stream_get_meta_data($tempFile)['uri'];
+        $tempDir = storage_path('app/temp');
+        if (! file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+        $tempPath = $tempDir.'/test_png_'.uniqid().'.png';
+        file_put_contents($tempPath, $pngData);
 
         $file = new UploadedFile($tempPath, 'test.png', 'image/png', null, true);
         $result = $this->securityService->validateFileUpload($file);
 
         $this->assertTrue($result['valid']);
-        fclose($tempFile);
+        unlink($tempPath);
     }
 
     public function test_malicious_pattern_detection()

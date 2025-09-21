@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Helpers\FileTestHelper;
 use Tests\TestCase;
 
 class FlashcardImportFeatureTest extends TestCase
@@ -100,7 +101,7 @@ class FlashcardImportFeatureTest extends TestCase
     public function test_import_csv_file()
     {
         $content = "What is the capital of France?,Paris\nWhat is 2+2?,4,Basic math";
-        $file = UploadedFile::fake()->createWithContent('flashcards.csv', $content);
+        $file = FileTestHelper::createUploadedFileWithContent('flashcards.csv', $content, 'text/csv');
 
         $response = $this->actingAs($this->user)
             ->post(route('units.flashcards.import.preview', $this->unit->id), [
@@ -111,6 +112,9 @@ class FlashcardImportFeatureTest extends TestCase
         $response->assertOk();
         $response->assertViewIs('flashcards.partials.import-preview');
         $response->assertViewHas('cards');
+
+        // Clean up
+        unlink($file->getPathname());
         $response->assertViewHas('canImport', true);
     }
 
@@ -242,7 +246,7 @@ class FlashcardImportFeatureTest extends TestCase
     #[Test]
     public function test_import_empty_file_content()
     {
-        $file = UploadedFile::fake()->createWithContent('empty.csv', '');
+        $file = FileTestHelper::createUploadedFileWithContent('empty.csv', '', 'text/csv');
 
         $response = $this->actingAs($this->user)
             ->post(route('units.flashcards.import.preview', $this->unit->id), [
@@ -252,6 +256,9 @@ class FlashcardImportFeatureTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertSeeText('File is empty');
+
+        // Clean up
+        unlink($file->getPathname());
     }
 
     #[Test]
