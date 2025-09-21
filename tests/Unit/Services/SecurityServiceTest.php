@@ -4,7 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Services\SecurityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
+use Tests\Helpers\FileTestHelper;
 use Tests\TestCase;
 
 /**
@@ -36,7 +36,7 @@ class SecurityServiceTest extends TestCase
             $this->markTestSkipped('GD extension is not installed');
         }
 
-        $file = UploadedFile::fake()->image('test.png', 100, 100);
+        $file = FileTestHelper::createImageFile('test.png', 100, 100);
 
         $result = $this->securityService->validateFileUpload($file);
 
@@ -44,39 +44,53 @@ class SecurityServiceTest extends TestCase
         $this->assertEmpty($result['errors']);
         $this->assertEquals('safe', $result['security_level']);
         $this->assertEquals('image', $result['file_type']);
+
+        // Clean up
+        unlink($file->getPathname());
     }
 
     public function test_validate_file_upload_valid_document()
     {
-        $file = UploadedFile::fake()->create('document.pdf', 1024, 'application/pdf');
+        $file = FileTestHelper::createUploadedFileWithContent('document.pdf', str_repeat('A', 1024), 'application/pdf');
 
         $result = $this->securityService->validateFileUpload($file);
 
         $this->assertTrue($result['valid']);
         $this->assertEmpty($result['errors']);
         $this->assertEquals('document', $result['file_type']);
+
+        // Clean up
+        unlink($file->getPathname());
     }
 
     public function test_validate_file_upload_dangerous_extension()
     {
-        $file = UploadedFile::fake()->create('malware.exe', 1024, 'application/x-executable');
+        $file = FileTestHelper::createUploadedFileWithContent('malware.exe', str_repeat('A', 1024), 'application/x-executable');
 
         $result = $this->securityService->validateFileUpload($file);
 
         $this->assertFalse($result['valid']);
         $this->assertNotEmpty($result['errors']);
         $this->assertStringContainsString('not allowed for security reasons', $result['errors'][0]);
+
+        // Clean up
+        unlink($file->getPathname());
     }
 
     public function test_validate_file_upload_oversized_file()
     {
-        // Create oversized image (6MB > 5MB limit)
-        $file = UploadedFile::fake()->create('large.png', 6 * 1024 * 1024, 'image/png');
+        // Create oversized image (6MB > 5MB limit) with valid PNG content
+        $pngData = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
+        $largeContent = str_repeat($pngData, 200000); // This will make it > 5MB (200k repetitions * 67 bytes = ~13MB)
+        $file = FileTestHelper::createUploadedFileWithContent('large.png', $largeContent, 'image/png');
 
         $result = $this->securityService->validateFileUpload($file);
 
         $this->assertFalse($result['valid']);
         $this->assertStringContainsString('File size exceeds maximum', $result['errors'][0]);
+
+        // Clean up
+        unlink($file->getPathname());
     }
 
     public function test_scan_content_security_safe_content()
@@ -263,29 +277,26 @@ class SecurityServiceTest extends TestCase
         ];
 
         foreach ($allowedTypes as $mimeType => $filename) {
-            $file = UploadedFile::fake()->create($filename, 1024, $mimeType);
+            $file = FileTestHelper::createUploadedFileWithContent($filename, str_repeat('A', 1024), $mimeType);
             $result = $this->securityService->validateFileUpload($file);
 
             $this->assertTrue($result['valid'], "File type {$mimeType} should be valid");
+
+            // Clean up
+            unlink($file->getPathname());
         }
     }
 
     public function test_file_signature_validation()
     {
-        // Test with a real PNG signature
-        $pngData = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-        $tempDir = storage_path('app/temp');
-        if (! file_exists($tempDir)) {
-            mkdir($tempDir, 0755, true);
-        }
-        $tempPath = $tempDir.'/test_png_'.uniqid().'.png';
-        file_put_contents($tempPath, $pngData);
-
-        $file = new UploadedFile($tempPath, 'test.png', 'image/png', null, true);
+        // Test with a real PNG signature using FileTestHelper
+        $file = FileTestHelper::createImageFile('test.png', 1, 1, 'png');
         $result = $this->securityService->validateFileUpload($file);
 
         $this->assertTrue($result['valid']);
-        unlink($tempPath);
+
+        // Clean up
+        unlink($file->getPathname());
     }
 
     public function test_malicious_pattern_detection()
@@ -353,7 +364,7 @@ class SecurityServiceTest extends TestCase
         ];
 
         foreach ($testCases as $testCase) {
-            $file = UploadedFile::fake()->create($testCase['filename'], 1024, 'application/pdf');
+            $file = FileTestHelper::createUploadedFileWithContent($testCase['filename'], str_repeat('A', 1024), 'application/pdf');
             $result = $this->securityService->validateFileUpload($file);
 
             if ($testCase['should_be_valid']) {
@@ -363,6 +374,9 @@ class SecurityServiceTest extends TestCase
                 $this->assertTrue(! empty($result['warnings']) || ! empty($result['errors']),
                     "Filename '{$testCase['filename']}' should have warnings or errors");
             }
+
+            // Clean up
+            unlink($file->getPathname());
         }
     }
 
@@ -406,10 +420,13 @@ class SecurityServiceTest extends TestCase
         ];
 
         foreach ($dangerousExtensions as $extension) {
-            $file = UploadedFile::fake()->create("malware.{$extension}", 1024, 'application/octet-stream');
+            $file = FileTestHelper::createUploadedFileWithContent("malware.{$extension}", str_repeat('A', 1024), 'application/octet-stream');
             $result = $this->securityService->validateFileUpload($file);
 
             $this->assertFalse($result['valid'], "Extension '.{$extension}' should be blocked");
+
+            // Clean up
+            unlink($file->getPathname());
         }
     }
 
@@ -423,7 +440,7 @@ class SecurityServiceTest extends TestCase
         ];
 
         foreach ($testCases as $testCase) {
-            $file = UploadedFile::fake()->create('test', $testCase['size'], $testCase['type']);
+            $file = FileTestHelper::createFileWithSize('test', $testCase['size'], $testCase['type']);
             $result = $this->securityService->validateFileUpload($file);
 
             if ($testCase['should_pass']) {
@@ -433,6 +450,9 @@ class SecurityServiceTest extends TestCase
                 $this->assertFalse($result['valid'],
                     "File of type {$testCase['type']} with size {$testCase['size']} should fail");
             }
+
+            // Clean up
+            unlink($file->getPathname());
         }
     }
 }

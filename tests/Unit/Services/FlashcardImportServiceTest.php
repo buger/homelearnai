@@ -8,7 +8,6 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Services\FlashcardImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Helpers\FileTestHelper;
 use Tests\TestCase;
@@ -326,11 +325,14 @@ class FlashcardImportServiceTest extends TestCase
     #[Test]
     public function it_handles_empty_file()
     {
-        $file = UploadedFile::fake()->create('empty.csv', 0);
+        $file = FileTestHelper::createUploadedFileWithContent('empty.csv', '', 'text/csv');
 
         $result = $this->importService->parseFile($file);
 
         $this->assertFalse($result['success']);
         $this->assertEquals('File is empty or could not be read', $result['error']);
+
+        // Clean up
+        unlink($file->getPathname());
     }
 }

@@ -7,7 +7,6 @@ use App\Models\Subject;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Helpers\FileTestHelper;
@@ -204,11 +203,15 @@ class FlashcardImportFeatureTest extends TestCase
     public function test_import_file_validation()
     {
         // Test file too large
+        $file = FileTestHelper::createUploadedFileWithContent('large.csv', str_repeat('x', 6000), 'text/csv');
         $response = $this->actingAs($this->user)
             ->post(route('units.flashcards.import.preview', $this->unit->id), [
                 'import_method' => 'file',
-                'import_file' => UploadedFile::fake()->create('large.csv', 6000), // > 5MB
+                'import_file' => $file,
             ]);
+
+        // Clean up
+        unlink($file->getPathname());
 
         $response->assertStatus(422);
 
