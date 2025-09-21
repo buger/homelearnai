@@ -39,7 +39,5 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <ini name="memory_limit" value="512M"/>
-        <ini name="sys_temp_dir" value="/home/buger/projects/learning-app/storage/temp"/>
-        <env name="TMPDIR" value="/home/buger/projects/learning-app/storage/temp"/>
     </php>
 </phpunit>

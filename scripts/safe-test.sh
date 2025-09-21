@@ -28,7 +28,8 @@ export SESSION_DRIVER=file
 
 # Create temp directory for file operations
 mkdir -p storage/temp
-export TMPDIR="$(pwd)/storage/temp"
+# Use provided TMPDIR or default to local storage/temp
+export TMPDIR="${TMPDIR:-$(pwd)/storage/temp}"
 
 echo -e "${YELLOW}📋 Test Configuration:${NC}"
 echo "   Environment: $APP_ENV"

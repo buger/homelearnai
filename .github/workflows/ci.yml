@@ -70,6 +70,7 @@ jobs:
         DB_USERNAME: laravel
         DB_PASSWORD: 12345
       run: |
+        mkdir -p storage/temp
         php artisan migrate --force
 
     - name: Build frontend assets
@@ -94,6 +95,7 @@ jobs:
         APP_ENV: testing
         APP_URL: http://localhost
         APP_DEBUG: false
+        TMPDIR: ${{ github.workspace }}/storage/temp
       run: composer run test:ci
 
     - name: Run JavaScript linting

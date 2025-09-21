@@ -21,9 +21,8 @@ abstract class TestCase extends BaseTestCase
 
         // List of allowed test database names (local and CI)
         $allowedTestDatabases = [
-            'learning_app_test',    // Local development
-            'homeschoolai_test',    // GitHub Actions CI
-            'homeschoolai_e2e',     // GitHub Actions E2E
+            'learning_app_test',    // Local development and GitHub Actions CI
+            'learning_app_e2e',     // GitHub Actions E2E
         ];
 
         if (! in_array($database, $allowedTestDatabases)) {
