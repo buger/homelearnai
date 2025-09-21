@@ -14,9 +14,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: homeschoolai_test
+          POSTGRES_USER: laravel
+          POSTGRES_PASSWORD: 12345
+          POSTGRES_DB: learning_app_test
         ports:
           - 5432:5432
         options: >-
@@ -66,9 +66,9 @@ jobs:
         DB_CONNECTION: pgsql
         DB_HOST: localhost
         DB_PORT: 5432
-        DB_DATABASE: homeschoolai_test
-        DB_USERNAME: postgres
-        DB_PASSWORD: postgres
+        DB_DATABASE: learning_app_test
+        DB_USERNAME: laravel
+        DB_PASSWORD: 12345
       run: |
         php artisan migrate --force
 
@@ -86,15 +86,15 @@ jobs:
         DB_CONNECTION: pgsql
         DB_HOST: localhost
         DB_PORT: 5432
-        DB_DATABASE: homeschoolai_test
-        DB_USERNAME: postgres
-        DB_PASSWORD: postgres
+        DB_DATABASE: learning_app_test
+        DB_USERNAME: laravel
+        DB_PASSWORD: 12345
         CACHE_STORE: array
         SESSION_DRIVER: array
         APP_ENV: testing
         APP_URL: http://localhost
         APP_DEBUG: false
-      run: php -d memory_limit=2G artisan test
+      run: composer run test
 
     - name: Run JavaScript linting
       run: npm run lint
@@ -112,9 +112,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: homeschoolai_e2e
+          POSTGRES_USER: laravel
+          POSTGRES_PASSWORD: 12345
+          POSTGRES_DB: learning_app_e2e
         ports:
           - 5432:5432
         options: >-
@@ -149,9 +149,9 @@ jobs:
         DB_CONNECTION: pgsql
         DB_HOST: localhost
         DB_PORT: 5432
-        DB_DATABASE: homeschoolai_e2e
-        DB_USERNAME: postgres
-        DB_PASSWORD: postgres
+        DB_DATABASE: learning_app_e2e
+        DB_USERNAME: laravel
+        DB_PASSWORD: 12345
         APP_ENV: testing
       run: |
         cp .env.example .env
@@ -164,9 +164,9 @@ jobs:
         DB_CONNECTION: pgsql
         DB_HOST: localhost
         DB_PORT: 5432
-        DB_DATABASE: homeschoolai_e2e
-        DB_USERNAME: postgres
-        DB_PASSWORD: postgres
+        DB_DATABASE: learning_app_e2e
+        DB_USERNAME: laravel
+        DB_PASSWORD: 12345
         CACHE_STORE: array
         SESSION_DRIVER: file
         APP_ENV: testing
