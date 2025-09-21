@@ -77,6 +77,19 @@
             "@php artisan config:clear --ansi",
             "./scripts/safe-test.sh"
         ],
+        "test:ci": [
+            "@putenv APP_ENV=testing",
+            "@putenv DB_DATABASE=learning_app_test",
+            "@putenv DB_CONNECTION=pgsql",
+            "@putenv DB_HOST=localhost",
+            "@putenv DB_PORT=5432",
+            "@putenv DB_USERNAME=laravel",
+            "@putenv DB_PASSWORD=12345",
+            "@putenv CACHE_STORE=array",
+            "@putenv SESSION_DRIVER=array",
+            "@php artisan config:clear --ansi",
+            "@php artisan test --no-coverage"
+        ],
         "test:safe": [
             "./scripts/safe-test.sh"
         ],

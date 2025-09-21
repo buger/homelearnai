@@ -94,7 +94,7 @@ jobs:
         APP_ENV: testing
         APP_URL: http://localhost
         APP_DEBUG: false
-      run: composer run test
+      run: composer run test:ci
 
     - name: Run JavaScript linting
       run: npm run lint
