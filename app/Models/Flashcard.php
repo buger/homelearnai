@@ -10,8 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property int $id
- * @property int $unit_id
- * @property int|null $topic_id
+ * @property int $topic_id
  * @property string $card_type
  * @property string $question
  * @property string $answer
@@ -30,8 +29,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Carbon\Carbon|null $created_at
  * @property \Carbon\Carbon|null $updated_at
  * @property \Carbon\Carbon|null $deleted_at
+ * @property-read \App\Models\Topic $topic
  * @property-read \App\Models\Unit $unit
- * @property-read \App\Models\Topic|null $topic
  * @property-read \App\Models\Subject $subject
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Illuminate\Database\Eloquent\Model> $reviews
  */
@@ -43,7 +42,6 @@ class Flashcard extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'unit_id',
         'topic_id',
         'card_type',
         'question',
@@ -66,7 +64,6 @@ class Flashcard extends Model
      * The attributes that should be cast.
      */
     protected $casts = [
-        'unit_id' => 'integer',
         'topic_id' => 'integer',
         'choices' => 'array',
         'correct_choices' => 'array',
@@ -145,14 +142,6 @@ class Flashcard extends Model
     }
 
     /**
-     * Get the unit that owns the flashcard.
-     */
-    public function unit(): BelongsTo
-    {
-        return $this->belongsTo(Unit::class);
-    }
-
-    /**
      * Get the topic that owns the flashcard.
      */
     public function topic(): BelongsTo
@@ -161,12 +150,27 @@ class Flashcard extends Model
     }
 
     /**
-     * Get the subject this flashcard belongs to (through unit or topic).
+     * Get the unit through the topic relationship.
+     */
+    public function unit()
+    {
+        return $this->topic->unit ?? null;
+    }
+
+    /**
+     * Get the subject through the topic -> unit chain.
      */
     public function subject()
     {
-        // Always use unit -> subject relationship since both unit and topic flashcards have unit_id
-        return $this->hasOneThrough(Subject::class, Unit::class, 'id', 'id', 'unit_id', 'subject_id');
+        return $this->topic->unit->subject ?? null;
+    }
+
+    /**
+     * Get the unit_id through the topic relationship for backward compatibility.
+     */
+    public function getUnitIdAttribute(): ?int
+    {
+        return $this->topic?->unit_id;
     }
 
     /**
@@ -177,14 +181,6 @@ class Flashcard extends Model
     {
         // Review class doesn't exist as an Eloquent model yet - this is a placeholder
         return $this->hasMany(\App\Models\Flashcard::class, 'flashcard_id'); // Temporary placeholder
-    }
-
-    /**
-     * Scope to get flashcards for a specific unit
-     */
-    public function scopeForUnit($query, int $unitId)
-    {
-        return $query->where('unit_id', $unitId)->where('is_active', true)->orderBy('created_at');
     }
 
     /**

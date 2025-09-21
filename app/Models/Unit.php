@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $id
@@ -23,10 +22,6 @@ use Illuminate\Support\Facades\DB;
  * @property-read bool $can_complete
  * @property-read \App\Models\Subject $subject
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Topic> $topics
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Flashcard> $flashcards
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Flashcard> $allFlashcards
- * @property-read int $flashcards_count
- * @property-read int $all_flashcards_count
  */
 class Unit extends Model
 {
@@ -102,24 +97,6 @@ class Unit extends Model
     }
 
     /**
-     * Get the flashcards directly associated with this unit (not through topics).
-     */
-    public function flashcards(): HasMany
-    {
-        return $this->hasMany(Flashcard::class)->where('topic_id', null)->where('is_active', true);
-    }
-
-    /**
-     * Get all flashcards for this unit (both direct unit flashcards and through topics).
-     * This is a proper Eloquent relationship that supports withCount().
-     */
-    public function allFlashcards(): HasMany
-    {
-        return $this->hasMany(Flashcard::class, 'unit_id')
-            ->where('is_active', true);
-    }
-
-    /**
      * Scope to get units for a specific subject
      */
     public function scopeForSubject($query, int $subjectId)
@@ -128,22 +105,11 @@ class Unit extends Model
     }
 
     /**
-     * Scope to get units with flashcards (either direct or through topics)
-     */
-    public function scopeWithFlashcards($query)
-    {
-        return $query->whereHas('flashcards')
-            ->orWhereHas('topics.flashcards');
-    }
-
-    /**
      * Compatibility methods for existing controllers
-     * Includes flashcard counts to prevent N+1 queries when accessing getAllFlashcardsCount()
      */
     public static function forSubject(int $subjectId, $supabase = null): Collection
     {
         return self::where('subject_id', $subjectId)
-            ->withCount('allFlashcards')
             ->orderBy('target_completion_date')
             ->get();
     }
@@ -162,99 +128,6 @@ class Unit extends Model
     public function getTopicCount(): int
     {
         return $this->topics()->count();
-    }
-
-    /**
-     * Get count of all flashcards (both direct unit flashcards and through topics)
-     * This method now uses the proper relationship for efficient counting.
-     * For bulk operations on collections, use Unit::withCount('allFlashcards') instead.
-     */
-    public function getAllFlashcardsCount(): int
-    {
-        // Check if the count was already loaded via withCount('allFlashcards')
-        if (isset($this->attributes['all_flashcards_count'])) {
-            return (int) $this->attributes['all_flashcards_count'];
-        }
-
-        // Use the relationship for single instance access
-        return $this->allFlashcards()->count();
-    }
-
-    /**
-     * Efficiently get flashcard counts for multiple units using a single query.
-     * This prevents N+1 queries when working with collections of units.
-     *
-     * @param  \Illuminate\Database\Eloquent\Collection|\Illuminate\Support\Collection  $units
-     * @return array Array keyed by unit_id with flashcard counts as values
-     */
-    public static function getFlashcardCountsForUnits($units): array
-    {
-        if ($units->isEmpty()) {
-            return [];
-        }
-
-        $unitIds = $units->pluck('id')->toArray();
-
-        // Single query to get all flashcard counts by unit
-        $counts = DB::table('flashcards')
-            ->select('unit_id', DB::raw('COUNT(*) as count'))
-            ->whereIn('unit_id', $unitIds)
-            ->where('is_active', true)
-            ->whereNull('deleted_at')
-            ->groupBy('unit_id')
-            ->pluck('count', 'unit_id')
-            ->toArray();
-
-        // Ensure all units have a count (default to 0 for units with no flashcards)
-        $result = [];
-        foreach ($unitIds as $unitId) {
-            $result[$unitId] = $counts[$unitId] ?? 0;
-        }
-
-        return $result;
-    }
-
-    /**
-     * Get count of flashcards through topics only
-     */
-    public function getTopicFlashcardsCount(): int
-    {
-        return Flashcard::where('unit_id', $this->id)
-            ->whereNotNull('topic_id')
-            ->where('is_active', true)
-            ->count();
-    }
-
-    /**
-     * Get count of direct unit flashcards (not through topics)
-     */
-    public function getDirectFlashcardsCount(): int
-    {
-        return $this->flashcards()->count();
-    }
-
-    /**
-     * Check if unit has any flashcards (direct or through topics)
-     */
-    public function hasAnyFlashcards(): bool
-    {
-        return $this->allFlashcards()->exists();
-    }
-
-    /**
-     * Check if unit has direct flashcards (not through topics)
-     */
-    public function hasDirectFlashcards(): bool
-    {
-        return $this->flashcards()->exists();
-    }
-
-    /**
-     * Check if unit has flashcards through topics
-     */
-    public function hasTopicFlashcards(): bool
-    {
-        return $this->getTopicFlashcardsCount() > 0;
     }
 
     /**
@@ -436,12 +309,6 @@ class Unit extends Model
      */
     public function toArray(): array
     {
-        // Use pre-loaded counts if available to avoid N+1 queries
-        $allFlashcardsCount = $this->all_flashcards_count ?? $this->getAllFlashcardsCount();
-        $directFlashcardsCount = $this->flashcards_count ?? $this->getDirectFlashcardsCount();
-        $topicFlashcardsCount = $allFlashcardsCount - $directFlashcardsCount;
-        $topicsCount = $this->topics_count ?? $this->getTotalTopicsCountAttribute();
-
         return [
             'id' => $this->id,
             'subject_id' => $this->subject_id,
@@ -453,15 +320,11 @@ class Unit extends Model
             'is_overdue' => $this->isOverdue(),
             'days_until_target' => $this->getDaysUntilTarget(),
             'completed_topics_count' => $this->completed_topics_count,
-            'total_topics_count' => $topicsCount,
+            'total_topics_count' => isset($this->attributes['topics_count'])
+                ? (int) $this->attributes['topics_count']
+                : null,
             'completion_percentage' => $this->completion_percentage,
             'can_complete' => $this->can_complete,
-            'flashcards_count' => $directFlashcardsCount,
-            'topic_flashcards_count' => $topicFlashcardsCount,
-            'all_flashcards_count' => $allFlashcardsCount,
-            'has_flashcards' => $directFlashcardsCount > 0,
-            'has_topic_flashcards' => $topicFlashcardsCount > 0,
-            'has_any_flashcards' => $allFlashcardsCount > 0,
         ];
     }
 }

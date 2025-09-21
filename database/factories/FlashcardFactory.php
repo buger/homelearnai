@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Flashcard;
 use App\Models\Topic;
-use App\Models\Unit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -25,8 +24,7 @@ class FlashcardFactory extends Factory
     public function definition(): array
     {
         return [
-            'unit_id' => Unit::factory(),
-            'topic_id' => null, // Optional - can be set explicitly when needed
+            'topic_id' => Topic::factory(),
             'card_type' => fake()->randomElement(Flashcard::getCardTypes()),
             'question' => fake()->sentence().'?',
             'answer' => fake()->sentence(),
@@ -188,19 +186,7 @@ class FlashcardFactory extends Factory
     public function forTopic(Topic $topic): static
     {
         return $this->state(fn (array $attributes) => [
-            'unit_id' => $topic->unit_id,
             'topic_id' => $topic->id,
-        ]);
-    }
-
-    /**
-     * Create a flashcard for a specific unit (without topic assignment).
-     */
-    public function forUnit(Unit $unit): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'unit_id' => $unit->id,
-            'topic_id' => null,
         ]);
     }
 }

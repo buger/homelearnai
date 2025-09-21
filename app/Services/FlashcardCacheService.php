@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Flashcard;
-use App\Models\Unit;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -20,27 +19,27 @@ class FlashcardCacheService
     private const SEARCH_TTL = 900;
 
     // Cache key prefixes
-    private const PREFIX_UNIT_CARDS = 'flashcards:unit:';
+    private const PREFIX_TOPIC_CARDS = 'flashcards:topic:';
 
-    private const PREFIX_UNIT_COUNT = 'flashcards:count:unit:';
+    private const PREFIX_TOPIC_COUNT = 'flashcards:count:topic:';
 
     private const PREFIX_SEARCH = 'flashcards:search:';
 
-    private const PREFIX_STATS = 'flashcards:stats:unit:';
+    private const PREFIX_STATS = 'flashcards:stats:topic:';
 
     private const PREFIX_IMPORT_PROGRESS = 'flashcards:import:';
 
     /**
-     * Cache flashcards for a specific unit
+     * Cache flashcards for a specific topic
      */
-    public function cacheUnitFlashcards(int $unitId, ?Collection $flashcards = null): Collection
+    public function cacheTopicFlashcards(int $topicId, ?Collection $flashcards = null): Collection
     {
-        $cacheKey = self::PREFIX_UNIT_CARDS.$unitId;
+        $cacheKey = self::PREFIX_TOPIC_CARDS.$topicId;
 
         if ($flashcards !== null) {
             // Store in cache
             Cache::put($cacheKey, $flashcards->toArray(), self::DEFAULT_TTL);
-            Log::debug("Cached flashcards for unit {$unitId}", ['count' => $flashcards->count()]);
+            Log::debug("Cached flashcards for topic {$topicId}", ['count' => $flashcards->count()]);
 
             return $flashcards;
         }
@@ -48,7 +47,7 @@ class FlashcardCacheService
         // Try to get from cache first
         $cached = Cache::get($cacheKey);
         if ($cached !== null) {
-            Log::debug("Retrieved cached flashcards for unit {$unitId}", ['count' => count($cached)]);
+            Log::debug("Retrieved cached flashcards for topic {$topicId}", ['count' => count($cached)]);
             $collection = collect($cached)->map(function ($item) {
                 return new Flashcard($item);
             });
@@ -57,26 +56,24 @@ class FlashcardCacheService
         }
 
         // Cache miss - fetch from database
-        // Only fetch flashcards that are not assigned to a topic (unit-level context)
-        $flashcards = Flashcard::where('unit_id', $unitId)
-            ->whereNull('topic_id')
+        $flashcards = Flashcard::where('topic_id', $topicId)
             ->where('is_active', true)
-            ->with('unit.subject')
+            ->with('topic.unit.subject')
             ->orderBy('created_at', 'desc')
             ->get();
 
         Cache::put($cacheKey, $flashcards->toArray(), self::DEFAULT_TTL);
-        Log::debug("Fetched and cached flashcards for unit {$unitId}", ['count' => $flashcards->count()]);
+        Log::debug("Fetched and cached flashcards for topic {$topicId}", ['count' => $flashcards->count()]);
 
         return $flashcards;
     }
 
     /**
-     * Cache flashcard count for a unit
+     * Cache flashcard count for a topic
      */
-    public function cacheFlashcardCount(int $unitId, ?int $count = null): int
+    public function cacheTopicFlashcardCount(int $topicId, ?int $count = null): int
     {
-        $cacheKey = self::PREFIX_UNIT_COUNT.$unitId;
+        $cacheKey = self::PREFIX_TOPIC_COUNT.$topicId;
 
         if ($count !== null) {
             Cache::put($cacheKey, $count, self::COUNT_TTL);
@@ -91,9 +88,7 @@ class FlashcardCacheService
         }
 
         // Cache miss - fetch from database
-        // Only count flashcards that are not assigned to a topic (unit-level context)
-        $count = Flashcard::where('unit_id', $unitId)
-            ->whereNull('topic_id')
+        $count = Flashcard::where('topic_id', $topicId)
             ->where('is_active', true)
             ->count();
 
@@ -129,11 +124,11 @@ class FlashcardCacheService
     }
 
     /**
-     * Cache unit statistics
+     * Cache topic statistics
      */
-    public function cacheUnitStats(int $unitId, ?array $stats = null): array
+    public function cacheTopicStats(int $topicId, ?array $stats = null): array
     {
-        $cacheKey = self::PREFIX_STATS.$unitId;
+        $cacheKey = self::PREFIX_STATS.$topicId;
 
         if ($stats !== null) {
             Cache::put($cacheKey, $stats, self::DEFAULT_TTL);
@@ -147,7 +142,7 @@ class FlashcardCacheService
         }
 
         // Calculate stats
-        $flashcards = $this->cacheUnitFlashcards($unitId);
+        $flashcards = $this->cacheTopicFlashcards($topicId);
 
         $stats = [
             'total_cards' => $flashcards->count(),
@@ -187,24 +182,24 @@ class FlashcardCacheService
     }
 
     /**
-     * Invalidate all caches for a specific unit
+     * Invalidate all caches for a specific topic
      */
-    public function invalidateUnitCache(int $unitId): void
+    public function invalidateTopicCache(int $topicId): void
     {
         $keys = [
-            self::PREFIX_UNIT_CARDS.$unitId,
-            self::PREFIX_UNIT_COUNT.$unitId,
-            self::PREFIX_STATS.$unitId,
+            self::PREFIX_TOPIC_CARDS.$topicId,
+            self::PREFIX_TOPIC_COUNT.$topicId,
+            self::PREFIX_STATS.$topicId,
         ];
 
         foreach ($keys as $key) {
             Cache::forget($key);
         }
 
-        // Also clear any search caches that might contain this unit's cards
+        // Also clear any search caches that might contain this topic's cards
         $this->clearSearchCache();
 
-        Log::info("Invalidated flashcard caches for unit {$unitId}");
+        Log::info("Invalidated flashcard caches for topic {$topicId}");
     }
 
     /**
@@ -224,22 +219,22 @@ class FlashcardCacheService
     }
 
     /**
-     * Warm cache for a unit (preload data)
+     * Warm cache for a topic (preload data)
      */
-    public function warmCache(int $unitId): void
+    public function warmTopicCache(int $topicId): void
     {
-        Log::info("Warming cache for unit {$unitId}");
+        Log::info("Warming cache for topic {$topicId}");
 
         // Preload flashcards
-        $this->cacheUnitFlashcards($unitId);
+        $this->cacheTopicFlashcards($topicId);
 
         // Preload count
-        $this->cacheFlashcardCount($unitId);
+        $this->cacheTopicFlashcardCount($topicId);
 
         // Preload stats
-        $this->cacheUnitStats($unitId);
+        $this->cacheTopicStats($topicId);
 
-        Log::info("Cache warmed for unit {$unitId}");
+        Log::info("Cache warmed for topic {$topicId}");
     }
 
     /**
@@ -252,8 +247,8 @@ class FlashcardCacheService
         $stats = [
             'driver' => config('cache.default'),
             'prefixes' => [
-                'unit_cards' => self::PREFIX_UNIT_CARDS,
-                'unit_count' => self::PREFIX_UNIT_COUNT,
+                'topic_cards' => self::PREFIX_TOPIC_CARDS,
+                'topic_count' => self::PREFIX_TOPIC_COUNT,
                 'search' => self::PREFIX_SEARCH,
                 'stats' => self::PREFIX_STATS,
                 'import_progress' => self::PREFIX_IMPORT_PROGRESS,
@@ -274,8 +269,8 @@ class FlashcardCacheService
     public function clearAllCaches(): void
     {
         $prefixes = [
-            self::PREFIX_UNIT_CARDS,
-            self::PREFIX_UNIT_COUNT,
+            self::PREFIX_TOPIC_CARDS,
+            self::PREFIX_TOPIC_COUNT,
             self::PREFIX_SEARCH,
             self::PREFIX_STATS,
             self::PREFIX_IMPORT_PROGRESS,

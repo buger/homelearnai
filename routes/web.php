@@ -161,53 +161,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/reviews/slots/{slotId}', [ReviewController::class, 'destroySlot'])->name('reviews.slots.destroy');
     Route::patch('/reviews/slots/{slotId}/toggle', [ReviewController::class, 'toggleSlot'])->name('reviews.slots.toggle');
 
-    // Flashcards system - Unit-scoped routes
-    Route::get('/units/{unit}/flashcards', [FlashcardController::class, 'unitIndex'])->name('units.flashcards.index');
-    Route::get('/units/{unitId}/flashcards/list', [FlashcardController::class, 'listView'])->name('units.flashcards.list');
-    Route::get('/units/{unitId}/flashcards/create', [FlashcardController::class, 'create'])->name('units.flashcards.create');
-    Route::post('/units/{unitId}/flashcards', [FlashcardController::class, 'storeView'])->name('units.flashcards.store');
-    Route::get('/units/{unitId}/flashcards/{flashcardId}', [FlashcardController::class, 'show'])->name('units.flashcards.show');
-    Route::get('/units/{unitId}/flashcards/{flashcardId}/edit', [FlashcardController::class, 'edit'])->name('units.flashcards.edit');
-    Route::put('/units/{unitId}/flashcards/{flashcardId}', [FlashcardController::class, 'updateView'])->name('units.flashcards.update');
-    Route::delete('/units/{unitId}/flashcards/{flashcardId}', [FlashcardController::class, 'destroyView'])->name('units.flashcards.destroy');
-
-    // Flashcard bulk operations
-    Route::patch('/units/{unitId}/flashcards/bulk-status', [FlashcardController::class, 'bulkUpdateStatus'])->name('units.flashcards.bulk-status');
-    Route::get('/units/{unitId}/flashcards/type/{cardType}', [FlashcardController::class, 'getByType'])->name('units.flashcards.by-type');
-    Route::post('/units/{unitId}/flashcards/{flashcardId}/restore', [FlashcardController::class, 'restore'])->name('units.flashcards.restore');
-    Route::delete('/units/{unitId}/flashcards/{flashcardId}/force', [FlashcardController::class, 'forceDestroy'])->name('units.flashcards.force-destroy');
-
-    // Flashcard import/export
-    Route::get('/units/{unitId}/flashcards/import/show', [FlashcardController::class, 'showImport'])->name('units.flashcards.import.show');
-    Route::post('/units/{unitId}/flashcards/import/preview', [FlashcardController::class, 'previewImport'])->name('units.flashcards.import.preview');
-    Route::post('/units/{unitId}/flashcards/import/execute', [FlashcardController::class, 'executeImport'])->name('units.flashcards.import.execute');
-    Route::get('/units/{unitId}/flashcards/import/advanced', [FlashcardController::class, 'showAdvancedImportModal'])->name('units.flashcards.import.advanced');
-    Route::post('/units/{unitId}/flashcards/import/duplicates/resolve', [FlashcardController::class, 'resolveDuplicates'])->name('units.flashcards.import.resolve-duplicates');
-    Route::get('/units/{unitId}/flashcards/import/history', [FlashcardController::class, 'getImportHistory'])->name('units.flashcards.import.history');
-    Route::post('/flashcards/import/{importId}/rollback', [FlashcardController::class, 'rollbackImport'])->name('flashcards.import.rollback');
-
-    Route::get('/units/{unitId}/flashcards/export/show', [FlashcardController::class, 'showExportOptions'])->name('units.flashcards.export.show');
-    Route::post('/units/{unitId}/flashcards/export/preview', [FlashcardController::class, 'exportPreview'])->name('units.flashcards.export.preview');
-    Route::post('/units/{unitId}/flashcards/export/download', [FlashcardController::class, 'downloadExport'])->name('units.flashcards.export.download');
-    Route::get('/units/{unitId}/flashcards/export/bulk', [FlashcardController::class, 'bulkExportSelection'])->name('units.flashcards.export.bulk');
-    Route::get('/units/{unitId}/flashcards/export/stats', [FlashcardController::class, 'exportStats'])->name('units.flashcards.export.stats');
-
-    Route::get('/units/{unitId}/flashcards/print/show', [FlashcardController::class, 'showPrintOptions'])->name('units.flashcards.print.show');
-    Route::post('/units/{unitId}/flashcards/print/preview', [FlashcardController::class, 'printPreview'])->name('units.flashcards.print.preview');
-    Route::post('/units/{unitId}/flashcards/print/download', [FlashcardController::class, 'downloadPDF'])->name('units.flashcards.print.download');
-    Route::get('/units/{unitId}/flashcards/print/bulk', [FlashcardController::class, 'bulkPrintSelection'])->name('units.flashcards.print.bulk');
-
     // Flashcard preview (for parents only - no database impact)
-    Route::get('/units/{unit}/flashcards/preview/start', [FlashcardPreviewController::class, 'startPreview'])->name('units.flashcards.preview.start');
     Route::get('/preview/session/{sessionId}/next', [FlashcardPreviewController::class, 'getNextCard'])->name('flashcards.preview.next');
     Route::post('/preview/session/{sessionId}/answer', [FlashcardPreviewController::class, 'submitAnswer'])->name('flashcards.preview.answer');
     Route::get('/preview/session/{sessionId}/end', [FlashcardPreviewController::class, 'endPreview'])->name('flashcards.preview.end');
     Route::get('/preview/session/{sessionId}/status', [FlashcardPreviewController::class, 'getSessionStatus'])->name('flashcards.preview.status');
-
-    // Flashcard search and performance
-    Route::get('/units/{unitId}/flashcards/search', [FlashcardController::class, 'search'])->name('units.flashcards.search');
-    Route::get('/units/{unitId}/flashcards/performance', [FlashcardController::class, 'performanceMetrics'])->name('units.flashcards.performance');
-    Route::get('/units/{unitId}/flashcards/errors', [FlashcardController::class, 'errorStatistics'])->name('units.flashcards.errors');
 
     // Topic-scoped flashcard routes (web interface)
     Route::get('/topics/{topicId}/flashcards/list', [FlashcardController::class, 'listView'])->name('topics.flashcards.list');
@@ -223,13 +181,6 @@ Route::middleware('auth')->group(function () {
 
     // API Routes for JSON responses (used by tests and API consumers)
     Route::prefix('api')->group(function () {
-        // Unit-scoped flashcard routes
-        Route::get('/units/{unitId}/flashcards', [FlashcardController::class, 'index'])->name('api.units.flashcards.index');
-        Route::post('/units/{unitId}/flashcards', [FlashcardController::class, 'store'])->name('api.units.flashcards.store');
-        Route::get('/units/{unitId}/flashcards/{flashcardId}', [FlashcardController::class, 'show'])->name('api.units.flashcards.show');
-        Route::put('/units/{unitId}/flashcards/{flashcardId}', [FlashcardController::class, 'update'])->name('api.units.flashcards.update');
-        Route::delete('/units/{unitId}/flashcards/{flashcardId}', [FlashcardController::class, 'destroy'])->name('api.units.flashcards.destroy');
-
         // Topic-scoped flashcard routes
         Route::get('/topics/{topicId}/flashcards', [FlashcardController::class, 'index'])->name('api.topics.flashcards.index');
         Route::post('/topics/{topicId}/flashcards', [FlashcardController::class, 'store'])->name('api.topics.flashcards.store');
@@ -243,36 +194,7 @@ Route::middleware('auth')->group(function () {
 
         // Flashcard management across topics
         Route::post('/flashcards/{flashcardId}/move', [FlashcardController::class, 'moveToTopic'])->name('api.flashcards.move');
-        Route::patch('/units/{unitId}/flashcards/bulk-status', [FlashcardController::class, 'bulkUpdateStatus'])->name('api.units.flashcards.bulk-status');
-        Route::get('/units/{unitId}/flashcards/type/{cardType}', [FlashcardController::class, 'getByType'])->name('api.units.flashcards.by-type');
-        Route::post('/units/{unitId}/flashcards/{flashcardId}/restore', [FlashcardController::class, 'restore'])->name('api.units.flashcards.restore');
-        Route::delete('/units/{unitId}/flashcards/{flashcardId}/force', [FlashcardController::class, 'forceDestroy'])->name('api.units.flashcards.force-destroy');
-
-        // API Import/Export routes (tests expect these)
-        Route::post('/units/{unitId}/flashcards/import/preview', [FlashcardController::class, 'previewImport'])->name('api.units.flashcards.import.preview');
-        Route::post('/units/{unitId}/flashcards/import', [FlashcardController::class, 'executeImport'])->name('api.units.flashcards.import.execute');
-
-        // Legacy flashcard API routes for backwards compatibility (tests expect these)
-        Route::get('/flashcards/{unitId}', [FlashcardController::class, 'index'])->name('api.flashcards.index');
-        Route::post('/flashcards/{unitId}', [FlashcardController::class, 'store'])->name('api.flashcards.store');
-        Route::get('/flashcards/{unitId}/{flashcardId}', [FlashcardController::class, 'show'])->name('api.flashcards.show');
-        Route::put('/flashcards/{unitId}/{flashcardId}', [FlashcardController::class, 'update'])->name('api.flashcards.update');
-        Route::delete('/flashcards/{unitId}/{flashcardId}', [FlashcardController::class, 'destroy'])->name('api.flashcards.destroy');
     });
-
-    // Legacy flashcard export/import routes (tests expect these patterns)
-    Route::get('/flashcards/{unitId}/export/options', [FlashcardController::class, 'showExportOptions'])->name('flashcards.export.options');
-    Route::post('/flashcards/{unitId}/export/preview', [FlashcardController::class, 'exportPreview'])->name('flashcards.export.preview');
-    Route::post('/flashcards/{unitId}/export/download', [FlashcardController::class, 'downloadExport'])->name('flashcards.export.download');
-    Route::get('/flashcards/{unitId}/export/bulk', [FlashcardController::class, 'bulkExportSelection'])->name('flashcards.export.bulk_selection');
-    Route::get('/flashcards/{unitId}/export/stats', [FlashcardController::class, 'exportStats'])->name('flashcards.export.stats');
-    Route::get('/flashcards/{unitId}/import', [FlashcardController::class, 'showImport'])->name('flashcards.import');
-    Route::get('/flashcards/{unitId}/import/preview', [FlashcardController::class, 'previewImport'])->name('flashcards.import.preview');
-    Route::post('/flashcards/{unitId}/import/execute', [FlashcardController::class, 'executeImport'])->name('flashcards.import.execute');
-    Route::get('/flashcards/{unitId}/print/options', [FlashcardController::class, 'showPrintOptions'])->name('flashcards.print.options');
-    Route::post('/flashcards/{unitId}/print/preview', [FlashcardController::class, 'printPreview'])->name('flashcards.print.preview');
-    Route::post('/flashcards/{unitId}/print/download', [FlashcardController::class, 'downloadPDF'])->name('flashcards.print.download');
-    Route::get('/flashcards/{unitId}/print/bulk', [FlashcardController::class, 'bulkPrintSelection'])->name('flashcards.print.bulk_selection');
 
     // Tasks (legacy/fallback)
     Route::resource('tasks', TaskController::class);
