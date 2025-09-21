@@ -94,16 +94,20 @@ class FlashcardController extends Controller
             }
 
             if ($isTopicBased) {
-                // Topic-based flashcard listing
+                // Topic-based flashcard listing with optimized query
                 $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
                 if ((int) $topic->unit->subject->user_id !== auth()->id()) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
 
-                // Get flashcards for this topic
-                $flashcards = $topic->flashcards()
+                // Optimized flashcard query with proper indexing
+                $flashcards = Flashcard::where('topic_id', $topicId)
                     ->where('is_active', true)
                     ->orderBy('created_at', 'desc')
+                    ->select(['id', 'unit_id', 'topic_id', 'question', 'answer', 'hint', 'card_type',
+                        'difficulty_level', 'tags', 'choices', 'correct_choices', 'cloze_text',
+                        'cloze_answers', 'question_image_url', 'answer_image_url', 'occlusion_data',
+                        'is_active', 'created_at', 'updated_at'])
                     ->get();
 
                 $performance = $this->performanceService->endMonitoring($monitoringId, [

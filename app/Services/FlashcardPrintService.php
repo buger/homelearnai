@@ -41,6 +41,14 @@ class FlashcardPrintService
     public function generatePDF($flashcards, string $layout, array $options = [])
     {
         try {
+            // Memory optimization: check collection size and warn if too large
+            $cardCount = is_array($flashcards) ? count($flashcards) : $flashcards->count();
+            if ($cardCount > 1000) {
+                Log::warning('Large flashcard PDF generation requested', [
+                    'card_count' => $cardCount,
+                    'memory_before' => memory_get_usage(true) / 1024 / 1024 .'MB',
+                ]);
+            }
             // Default options
             $options = array_merge([
                 'page_size' => 'letter',
@@ -76,13 +84,13 @@ class FlashcardPrintService
             // Set paper size and orientation
             $pdf->setPaper($options['page_size'], $options['orientation']);
 
-            // Set options for better rendering
+            // Set options for better rendering and performance
             $pdf->setOptions([
                 'isHtml5ParserEnabled' => true,
                 'isPhpEnabled' => true,
                 'isRemoteEnabled' => false, // Security: disable remote content
                 'defaultFont' => 'DejaVu Sans', // Better Unicode support
-                'dpi' => 300, // High DPI for better print quality
+                'dpi' => $this->getOptimalDpi($flashcards->count()), // Dynamic DPI based on card count
                 'defaultPaperOrientation' => $options['orientation'],
                 'defaultPaperSize' => $options['page_size'],
                 'fontDir' => storage_path('fonts/'),
@@ -91,6 +99,13 @@ class FlashcardPrintService
                 'chroot' => base_path(),
                 'logOutputFile' => storage_path('logs/dompdf.log'),
                 'isJavascriptEnabled' => false, // Security: disable JS
+                'debugKeepTemp' => false, // Performance: don't keep temp files
+                'debugCss' => false, // Performance: disable CSS debugging
+                'debugLayout' => false, // Performance: disable layout debugging
+                'debugLayoutLines' => false, // Performance: disable layout line debugging
+                'debugLayoutBlocks' => false, // Performance: disable layout block debugging
+                'debugLayoutInline' => false, // Performance: disable inline debugging
+                'debugLayoutPaddingBox' => false, // Performance: disable padding box debugging
             ]);
 
             return $pdf;
@@ -685,6 +700,23 @@ class FlashcardPrintService
             if (! is_dir($directory)) {
                 mkdir($directory, 0755, true);
             }
+        }
+    }
+
+    /**
+     * Get optimal DPI based on flashcard count to balance quality and memory usage
+     */
+    protected function getOptimalDpi(int $cardCount): int
+    {
+        // For large collections, use lower DPI to reduce memory usage
+        if ($cardCount > 500) {
+            return 150; // Lower DPI for large sets
+        } elseif ($cardCount > 200) {
+            return 200; // Medium DPI for medium sets
+        } elseif ($cardCount > 50) {
+            return 250; // Higher DPI for smaller sets
+        } else {
+            return 300; // Maximum DPI for small sets
         }
     }
 }

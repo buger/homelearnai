@@ -430,12 +430,18 @@ class Unit extends Model
     /**
      * Convert the model instance to an array.
      *
-     * Note: This method calls getAllFlashcardsCount() which may cause N+1 queries
-     * when serializing collections. For collections, consider using:
-     * Unit::withCount('allFlashcards')->get() before serialization.
+     * Note: This method optimizes for performance by checking for pre-loaded counts
+     * and avoiding N+1 queries when possible. For collections, consider using:
+     * Unit::withCount(['allFlashcards', 'flashcards', 'topics'])->get() before serialization.
      */
     public function toArray(): array
     {
+        // Use pre-loaded counts if available to avoid N+1 queries
+        $allFlashcardsCount = $this->all_flashcards_count ?? $this->getAllFlashcardsCount();
+        $directFlashcardsCount = $this->flashcards_count ?? $this->getDirectFlashcardsCount();
+        $topicFlashcardsCount = $allFlashcardsCount - $directFlashcardsCount;
+        $topicsCount = $this->topics_count ?? $this->getTotalTopicsCountAttribute();
+
         return [
             'id' => $this->id,
             'subject_id' => $this->subject_id,
@@ -447,15 +453,15 @@ class Unit extends Model
             'is_overdue' => $this->isOverdue(),
             'days_until_target' => $this->getDaysUntilTarget(),
             'completed_topics_count' => $this->completed_topics_count,
-            'total_topics_count' => $this->total_topics_count,
+            'total_topics_count' => $topicsCount,
             'completion_percentage' => $this->completion_percentage,
             'can_complete' => $this->can_complete,
-            'flashcards_count' => $this->getDirectFlashcardsCount(),
-            'topic_flashcards_count' => $this->getTopicFlashcardsCount(),
-            'all_flashcards_count' => $this->getAllFlashcardsCount(),
-            'has_flashcards' => $this->hasDirectFlashcards(),
-            'has_topic_flashcards' => $this->hasTopicFlashcards(),
-            'has_any_flashcards' => $this->hasAnyFlashcards(),
+            'flashcards_count' => $directFlashcardsCount,
+            'topic_flashcards_count' => $topicFlashcardsCount,
+            'all_flashcards_count' => $allFlashcardsCount,
+            'has_flashcards' => $directFlashcardsCount > 0,
+            'has_topic_flashcards' => $topicFlashcardsCount > 0,
+            'has_any_flashcards' => $allFlashcardsCount > 0,
         ];
     }
 }
