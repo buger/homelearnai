@@ -370,7 +370,21 @@ class AccessControlService
 
             // Remove one-time use tokens
             if ($cachedData['one_time_use']) {
-                Cache::forget("file_access_token:{$hash}");
+                $lock = Cache::lock("token_lock:{$hash}", 5); // Lock for 5 seconds
+                if ($lock->get()) {
+                    try {
+                        // Re-check existence inside the lock to be certain
+                        if (Cache::has("file_access_token:{$hash}")) {
+                            Cache::forget("file_access_token:{$hash}");
+                        } else {
+                            return $result; // Token was consumed by another request
+                        }
+                    } finally {
+                        $lock->release();
+                    }
+                } else {
+                    return $result; // Could not get lock, treat as failed validation
+                }
             }
 
             $result = [
