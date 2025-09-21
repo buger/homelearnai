@@ -529,21 +529,18 @@ class RichContentServiceTest extends TestCase
 
     public function test_supported_image_formats()
     {
-        if (! function_exists('imagecreatetruecolor')) {
-            $this->markTestSkipped('GD extension is not installed');
-        }
-
         $topicId = 123;
         $supportedFormats = [
-            ['name' => 'test.jpg', 'mime' => 'image/jpeg'],
-            ['name' => 'test.png', 'mime' => 'image/png'],
-            ['name' => 'test.gif', 'mime' => 'image/gif'],
-            ['name' => 'test.webp', 'mime' => 'image/webp'],
-            ['name' => 'test.svg', 'mime' => 'image/svg+xml'],
+            ['name' => 'test.jpg', 'format' => 'jpeg'],
+            ['name' => 'test.png', 'format' => 'png'],
+            ['name' => 'test.gif', 'format' => 'gif'],
+            ['name' => 'test.webp', 'format' => 'webp'],
+            ['name' => 'test.svg', 'format' => 'svg'],
         ];
 
         foreach ($supportedFormats as $format) {
-            $mockFile = FileTestHelper::createUploadedFileWithContent($format['name'], str_repeat('A', 1024), $format['mime']);
+            // Use createImageFile which creates proper image content
+            $mockFile = FileTestHelper::createImageFile($format['name'], 100, 100, $format['format']);
             $result = $this->service->uploadContentImage($topicId, $mockFile);
 
             $this->assertIsArray($result);

@@ -67,6 +67,9 @@ class FlashcardPrintService
             // Generate HTML content
             $html = $this->generateHTML($flashcards, $layout, $options);
 
+            // Ensure required directories exist
+            $this->ensureDirectoriesExist();
+
             // Configure PDF
             $pdf = Pdf::loadHTML($html);
 
@@ -665,5 +668,23 @@ class FlashcardPrintService
         $html .= '</body></html>';
 
         return $html;
+    }
+
+    /**
+     * Ensure required directories exist for PDF generation
+     */
+    protected function ensureDirectoriesExist(): void
+    {
+        $directories = [
+            storage_path('fonts'),
+            storage_path('app/temp'),
+            storage_path('logs'),
+        ];
+
+        foreach ($directories as $directory) {
+            if (! is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+        }
     }
 }
