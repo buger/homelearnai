@@ -1106,7 +1106,7 @@ class FlashcardController extends Controller
             $errors = collect($e->validator->errors()->all())->implode('<br>');
             \Log::error('Topic flashcard validation errors:', $e->validator->errors()->toArray());
 
-            return response('<div class="text-red-500">'.$errors.'</div>', 422);
+            return response('<div class="text-red-500">'.htmlspecialchars($errors).'</div>', 422);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response('Topic not found', 404);
         } catch (\Exception $e) {
@@ -1209,7 +1209,7 @@ class FlashcardController extends Controller
             $errors = collect($e->validator->errors()->all())->implode('<br>');
             \Log::error('Flashcard validation errors:', $e->validator->errors()->toArray());
 
-            return response('<div class="text-red-500">'.$errors.'</div>', 422);
+            return response('<div class="text-red-500">'.htmlspecialchars($errors).'</div>', 422);
         } catch (\Exception $e) {
             Log::error('Error creating flashcard: '.$e->getMessage());
 
@@ -1294,7 +1294,7 @@ class FlashcardController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = collect($e->validator->errors()->all())->implode('<br>');
 
-            return response('<div class="text-red-500">'.$errors.'</div>', 422);
+            return response('<div class="text-red-500">'.htmlspecialchars($errors).'</div>', 422);
         } catch (\Exception $e) {
             Log::error('Error updating flashcard: '.$e->getMessage());
 
@@ -1483,7 +1483,7 @@ class FlashcardController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = collect($e->validator->errors()->all())->implode('<br>');
 
-            return response('<div class="text-red-500">'.$errors.'</div>', 422);
+            return response('<div class="text-red-500">'.htmlspecialchars($errors).'</div>', 422);
         } catch (\Exception $e) {
             Log::error('Error previewing import: '.$e->getMessage());
 
@@ -1566,7 +1566,7 @@ class FlashcardController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = collect($e->validator->errors()->all())->implode('<br>');
 
-            return response('<div class="text-red-500">'.$errors.'</div>', 422);
+            return response('<div class="text-red-500">'.htmlspecialchars($errors).'</div>', 422);
         } catch (\Exception $e) {
             Log::error('Error executing import: '.$e->getMessage());
 
@@ -1692,7 +1692,7 @@ class FlashcardController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = collect($e->validator->errors()->all())->implode('<br>');
 
-            return response('<div class="text-red-500">'.$errors.'</div>', 422);
+            return response('<div class="text-red-500">'.htmlspecialchars($errors).'</div>', 422);
         } catch (\Exception $e) {
             Log::error('Error generating print preview: '.$e->getMessage());
 
@@ -1971,7 +1971,7 @@ class FlashcardController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = collect($e->validator->errors()->all())->implode('<br>');
 
-            return response('<div class="text-red-500">'.$errors.'</div>', 422);
+            return response('<div class="text-red-500">'.htmlspecialchars($errors).'</div>', 422);
         } catch (\Exception $e) {
             Log::error('Error generating export preview: '.$e->getMessage());
 

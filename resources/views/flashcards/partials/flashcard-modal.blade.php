@@ -314,7 +314,7 @@
         
             @if($flashcard && $flashcard->card_type === 'multiple_choice' && !empty($flashcard->choices))
                 @foreach($flashcard->choices as $index => $choice)
-                    addChoice('{{ $choice }}', {{ in_array($index, $flashcard->correct_choices ?? []) ? 'true' : 'false' }});
+                    addChoice(@json($choice), {{ in_array($index, $flashcard->correct_choices ?? []) ? 'true' : 'false' }});
                 @endforeach
             @else
                 // Add two default choices
