@@ -129,6 +129,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/planning', [PlanningController::class, 'index'])->name('planning.index');
     Route::get('/planning/sessions/create', [PlanningController::class, 'createSession'])->name('planning.create-session');
     Route::post('/planning/sessions', [PlanningController::class, 'createSession'])->name('planning.sessions.store');
+    Route::delete('/planning/sessions/{sessionId}', [PlanningController::class, 'destroySession'])->name('planning.sessions.destroy');
     Route::patch('/planning/sessions/{sessionId}/status', [PlanningController::class, 'updateSessionStatus'])->name('planning.sessions.status');
     Route::patch('/planning/sessions/{sessionId}/schedule', [PlanningController::class, 'scheduleSession'])->name('planning.sessions.schedule');
     Route::patch('/planning/sessions/{sessionId}/unschedule', [PlanningController::class, 'unscheduleSession'])->name('planning.sessions.unschedule');

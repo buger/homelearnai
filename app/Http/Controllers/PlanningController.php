@@ -13,6 +13,7 @@ use App\Services\SchedulingEngine;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class PlanningController extends Controller
@@ -666,5 +667,25 @@ class PlanningController extends Controller
         $days = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
         return $days[$day] ?? '';
+    }
+
+    public function destroySession(int $sessionId): Response
+    {
+        $session = Session::find($sessionId);
+        if (! $session) {
+            abort(404);
+        }
+
+        // Verify session belongs to user's child
+        $child = $session->child;
+        if (! $child || $child->user_id != auth()->id()) {
+            abort(403);
+        }
+
+        // Delete the session
+        $session->delete();
+
+        // Return empty content to remove the session card from the UI
+        return response('')->header('HX-Trigger', 'sessionDeleted');
     }
 }
