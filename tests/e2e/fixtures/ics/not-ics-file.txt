@@ -1,0 +1,3 @@
+This is not an ICS file.
+It's just a plain text file.
+It should be rejected by the import system.

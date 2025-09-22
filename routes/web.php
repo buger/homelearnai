@@ -148,7 +148,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/calendar/{id}', [CalendarController::class, 'update'])->name('calendar.update');
     Route::delete('/calendar/{id}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
     Route::get('/calendar/import', [IcsImportController::class, 'index'])->name('calendar.import');
-    Route::post('/calendar/import/file', [IcsImportController::class, 'importFile'])->name('calendar.import.file');
+    Route::post('/calendar/import/preview', [IcsImportController::class, 'preview'])->name('calendar.import.preview');
+    Route::post('/calendar/import/process', [IcsImportController::class, 'import'])->name('calendar.import.process');
+    Route::post('/calendar/import/file', [IcsImportController::class, 'import'])->name('calendar.import.file');
     Route::post('/calendar/import/url', [IcsImportController::class, 'importUrl'])->name('calendar.import.url');
     Route::get('/calendar/import/help', [IcsImportController::class, 'help'])->name('calendar.import.help');
 
