@@ -102,12 +102,12 @@ class Subject extends Model
      * Compatibility methods for existing controllers that expect SupabaseClient
      * These maintain API compatibility during migration
      */
-    public static function forUser(string $userId, $supabase = null): Collection
+    public static function forUser(string $userId): Collection
     {
         return self::where('user_id', $userId)->orderBy('name')->get();
     }
 
-    public static function forChild(int $childId, $supabase = null): Collection
+    public static function forChild(int $childId): Collection
     {
         return self::where('child_id', $childId)->orderBy('name')->get();
     }
@@ -129,7 +129,7 @@ class Subject extends Model
     /**
      * Compatibility method for controllers that still pass SupabaseClient
      */
-    public function getUnitCount_compat($supabase = null): int
+    public function getUnitCount_compat(): int
     {
         return $this->getUnitCount();
     }

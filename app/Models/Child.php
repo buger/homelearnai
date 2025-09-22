@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Services\SupabaseClient;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -96,7 +95,7 @@ class Child extends Model
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, Child>
      */
-    public static function forUser(int|string $userId, ?SupabaseClient $supabase = null): \Illuminate\Database\Eloquent\Collection
+    public static function forUser(int|string $userId): \Illuminate\Database\Eloquent\Collection
     {
         return self::where('user_id', $userId)->orderBy('name')->get();
     }

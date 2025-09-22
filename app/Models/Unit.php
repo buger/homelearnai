@@ -107,7 +107,7 @@ class Unit extends Model
     /**
      * Compatibility methods for existing controllers
      */
-    public static function forSubject(int $subjectId, $supabase = null): Collection
+    public static function forSubject(int $subjectId): Collection
     {
         return self::where('subject_id', $subjectId)
             ->orderBy('target_completion_date')
@@ -133,7 +133,7 @@ class Unit extends Model
     /**
      * Compatibility method for controllers
      */
-    public function getTopicCount_compat($supabase = null): int
+    public function getTopicCount_compat(): int
     {
         return $this->getTopicCount();
     }
@@ -141,7 +141,7 @@ class Unit extends Model
     /**
      * Get progress statistics for this unit
      */
-    public function getProgressStats($supabase = null): array
+    public function getProgressStats(): array
     {
         $topics = $this->topics;
         $totalTopics = $topics->count();
@@ -161,7 +161,7 @@ class Unit extends Model
     /**
      * Get detailed progress for a specific child
      */
-    public function getProgressForChild(int $childId, $supabase = null): array
+    public function getProgressForChild(int $childId): array
     {
         $topics = $this->topics()->get();
         $requiredTopics = $topics->where('required', true);
@@ -170,9 +170,11 @@ class Unit extends Model
         $completedSessions = collect([]);
         foreach ($topics as $topic) {
             /** @var \App\Models\Topic $topic */
-            $sessions = Session::where('topic_id', $topic->id, $supabase)
-                ->where('child_id', $childId)
-                ->where('status', 'done');
+            // Session model not yet converted to Eloquent - skip this for now
+            // $sessions = Session::where('topic_id', $topic->id)
+            //     ->where('child_id', $childId)
+            //     ->where('status', 'done');
+            $sessions = collect(); // Empty collection until Session model is converted
             $completedSessions = $completedSessions->merge($sessions);
         }
 
@@ -202,9 +204,9 @@ class Unit extends Model
     /**
      * Get progress bar data for UI display
      */
-    public function getProgressBarData(int $childId, $supabase = null): array
+    public function getProgressBarData(int $childId): array
     {
-        $progress = $this->getProgressForChild($childId, $supabase);
+        $progress = $this->getProgressForChild($childId);
 
         $color = 'bg-gray-200';
         if ($progress['completion_percentage'] >= 100) {
@@ -231,9 +233,9 @@ class Unit extends Model
     /**
      * Check if unit meets completion gate requirements
      */
-    public function meetsCompletionGate(int $childId, $supabase = null): bool
+    public function meetsCompletionGate(int $childId): bool
     {
-        $progress = $this->getProgressForChild($childId, $supabase);
+        $progress = $this->getProgressForChild($childId);
 
         return $progress['can_complete'];
     }
@@ -241,9 +243,9 @@ class Unit extends Model
     /**
      * Get completion status label
      */
-    public function getCompletionStatus(int $childId, $supabase = null): string
+    public function getCompletionStatus(int $childId): string
     {
-        $progress = $this->getProgressForChild($childId, $supabase);
+        $progress = $this->getProgressForChild($childId);
 
         if ($progress['can_complete']) {
             return 'Complete';
@@ -261,9 +263,9 @@ class Unit extends Model
     /**
      * Get next topics that should be worked on
      */
-    public function getNextTopics(int $childId, $supabase = null, int $limit = 3): Collection
+    public function getNextTopics(int $childId, int $limit = 3): Collection
     {
-        $progress = $this->getProgressForChild($childId, $supabase);
+        $progress = $this->getProgressForChild($childId);
         $topics = $this->topics()->get();
 
         // Get topics that are not yet completed

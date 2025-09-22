@@ -294,14 +294,14 @@ class CacheService
     /**
      * Warm cache with commonly accessed data
      */
-    public function warmUserCache(string $userId, SupabaseClient $supabase): void
+    public function warmUserCache(string $userId): void
     {
         // Cache user's children
-        $children = Child::forUser($userId, $supabase);
+        $children = Child::forUser($userId);
         $this->cacheUserChildren($userId, $children);
 
         // Cache user's subjects
-        $subjects = Subject::forUser($userId, $supabase);
+        $subjects = Subject::forUser($userId);
         $this->cacheUserSubjects($userId, $subjects);
 
         // Cache each child's commonly accessed data

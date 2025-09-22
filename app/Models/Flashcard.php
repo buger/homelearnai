@@ -302,7 +302,7 @@ class Flashcard extends Model
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Flashcard>
      */
-    public static function forUnit(int $unitId, $supabase = null): \Illuminate\Database\Eloquent\Collection
+    public static function forUnit(int $unitId): \Illuminate\Database\Eloquent\Collection
     {
         return self::where('unit_id', $unitId)
             ->whereNull('topic_id') // Only unit-scoped flashcards
@@ -316,7 +316,7 @@ class Flashcard extends Model
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Flashcard>
      */
-    public static function forTopic(int $topicId, $supabase = null): \Illuminate\Database\Eloquent\Collection
+    public static function forTopic(int $topicId): \Illuminate\Database\Eloquent\Collection
     {
         return self::where('topic_id', $topicId)->where('is_active', true)->orderBy('created_at')->get();
     }

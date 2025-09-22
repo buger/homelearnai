@@ -1,5 +1,5 @@
 @php
-  $progressData = $unit->getProgressBarData($childId, $supabase ?? app('App\\Services\\SupabaseClient'));
+  $progressData = $unit->getProgressBarData($childId);
 @endphp
 
 <!-- Unit Progress Bar -->
@@ -23,7 +23,7 @@
       
       <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full 
         {{ $progressData['status'] === 'complete' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800' }}">
-        {{ $unit->getCompletionStatus($childId, $supabase ?? app('App\\Services\\SupabaseClient')) }}
+        {{ $unit->getCompletionStatus($childId) }}
       </span>
     </div>
   </div>
@@ -53,7 +53,7 @@
 
   <!-- Completion Gate Status -->
   @php
-    $meetsGate = $unit->meetsCompletionGate($childId, $supabase ?? app('App\\Services\\SupabaseClient'));
+    $meetsGate = $unit->meetsCompletionGate($childId);
   @endphp
   
   @if(!$meetsGate)
@@ -84,7 +84,7 @@
 
   <!-- Next Topics to Work On -->
   @php
-    $nextTopics = $unit->getNextTopics($childId, $supabase ?? app('App\\Services\\SupabaseClient'), 3);
+    $nextTopics = $unit->getNextTopics($childId, 3);
   @endphp
   
   @if($nextTopics->count() > 0)
@@ -136,7 +136,7 @@
     
     <div x-show="expanded" x-collapse class="mt-3 space-y-2 text-xs text-gray-600">
       @php
-        $stats = $unit->getProgressForChild($childId, $supabase ?? app('App\\Services\\SupabaseClient'));
+        $stats = $unit->getProgressForChild($childId);
       @endphp
       
       <div class="grid grid-cols-2 gap-4">
