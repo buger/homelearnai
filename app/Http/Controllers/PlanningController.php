@@ -157,7 +157,7 @@ class PlanningController extends Controller
         }
 
         // Verify topic belongs to user's subjects (through unit -> subject)
-        $subject = $topic->subject;
+        $subject = $topic->unit->subject;
         if (! $subject || $subject->user_id != auth()->id()) {
             abort(403, 'Topic does not belong to user');
         }
