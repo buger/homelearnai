@@ -275,4 +275,33 @@ class TopicControllerTest extends TestCase
         $expectedUrl = route('units.topics.show', [$this->unit->id, $this->topic->id]);
         $response->assertSee($expectedUrl);
     }
+
+    #[Test]
+    public function it_shows_correct_create_topic_route_in_unit_view()
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->get(route('subjects.units.show', [
+            'subject' => $this->subject->id,
+            'unit' => $this->unit->id,
+        ]));
+
+        $response->assertOk();
+        // Check that the create topic button uses the correct route with both subject and unit parameters
+        $expectedUrl = route('topics.create', [$this->subject->id, $this->unit->id]);
+        $response->assertSee($expectedUrl);
+    }
+
+    #[Test]
+    public function it_can_access_topic_create_form()
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->get(route('topics.create', [$this->subject->id, $this->unit->id]));
+
+        $response->assertOk();
+        $response->assertViewIs('topics.create');
+        $response->assertViewHas('unit', $this->unit);
+        $response->assertViewHas('subject', $this->subject);
+    }
 }

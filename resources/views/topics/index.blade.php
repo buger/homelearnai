@@ -13,7 +13,7 @@
                    class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
                     {{ __('Back to Unit') }}
                 </a>
-                <a href="{{ route('topics.create', ['unit' => $unit->id]) }}" 
+                <a href="{{ route('topics.create', [$subject->id, $unit->id]) }}" 
                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
                     {{ __('Add Topic') }}
                 </a>

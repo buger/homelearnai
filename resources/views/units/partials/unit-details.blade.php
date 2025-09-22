@@ -45,7 +45,7 @@
         <div class="border-t pt-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold">{{ __('Topics') }}</h3>
-                <a href="{{ route('topics.create', ['unit' => $unit->id]) }}" 
+                <a href="{{ route('topics.create', [$subject->id, $unit->id]) }}" 
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
                     {{ __('Add Topic') }}
                 </a>
