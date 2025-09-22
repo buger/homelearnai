@@ -28,7 +28,7 @@
                     hx-post="{{ route('units.flashcards.store', $unit->id) }}"
                 @endif
             @endif
-            hx-target="#flashcards-list"
+            hx-target="{{ isset($topic) ? '#topic-flashcards-list' : '#flashcards-list' }}"
             hx-swap="innerHTML"
             hx-on::before-request="console.log('HTMX: Flashcard form submission starting...', event.detail)"
             hx-on::after-request="console.log('HTMX: Flashcard form submission completed', event.detail); if(event.detail.xhr.status >= 200 && event.detail.xhr.status < 300) { setTimeout(() => { const modal = event.target.closest('.fixed'); if(modal) { console.log('Removing flashcard modal...'); modal.remove(); } }, 100); }"
@@ -324,11 +324,15 @@
 
 <!-- JavaScript for dynamic form behavior -->
 <script>
-    let choiceCount = 0;
-    
-    // Modal form response is now handled by HTMX events
-    
-    function toggleCardTypeFields(cardType) {
+    // Avoid global variable conflicts by scoping variables but keeping functions global
+    (function() {
+        // Private variables to avoid conflicts
+        let modalChoiceCount = 0;
+
+        // Modal form response is now handled by HTMX events
+
+        // Make functions global so they can be called from HTML
+        window.toggleCardTypeFields = function(cardType) {
         // Hide all card-specific fields
         const fieldGroups = ['basic-fields', 'multiple-choice-fields', 'true-false-fields', 'cloze-fields', 'image-occlusion-fields'];
         fieldGroups.forEach(group => {
