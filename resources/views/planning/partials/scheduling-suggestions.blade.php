@@ -1,6 +1,6 @@
 @php
-  $topic = $session->topic($supabase ?? app('App\\Services\\SupabaseClient'));
-  $subject = $session->subject($supabase ?? app('App\\Services\\SupabaseClient'));
+  $topic = $session->topic;
+  $subject = $session->subject();
 @endphp
 
 <!-- Scheduling Suggestions Modal -->

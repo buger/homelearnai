@@ -162,7 +162,7 @@ class QualityHeuristicsService
 
         foreach ($sessionsByDay as $dayOfWeek => $daySessions) {
             $highIntensityCount = $daySessions->filter(function ($session) use ($highIntensitySubjects) {
-                $subject = $session->subject($this->supabase);
+                $subject = $session->subject();
 
                 return $subject && in_array($subject->name, $highIntensitySubjects);
             })->count();
@@ -186,7 +186,7 @@ class QualityHeuristicsService
 
             // Check morning vs afternoon scheduling for concentration-heavy subjects
             $morningIntense = $daySessions->filter(function ($session) use ($highIntensitySubjects) {
-                $subject = $session->subject($this->supabase);
+                $subject = $session->subject();
                 if (! $subject || ! in_array($subject->name, $highIntensitySubjects)) {
                     return false;
                 }
@@ -280,7 +280,7 @@ class QualityHeuristicsService
         // Group sessions by subject
         $subjectMinutes = [];
         foreach ($sessions as $session) {
-            $subject = $session->subject($this->supabase);
+            $subject = $session->subject();
             if ($subject) {
                 $subjectMinutes[$subject->name] = ($subjectMinutes[$subject->name] ?? 0) + $session->estimated_minutes;
             }

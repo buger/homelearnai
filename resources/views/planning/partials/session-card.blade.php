@@ -1,7 +1,7 @@
 @php
-  $topic = $session->topic($supabase ?? app(App\Services\SupabaseClient::class));
-  $unit = $topic ? $topic->unit($supabase ?? app(App\Services\SupabaseClient::class)) : null;
-  $subject = $unit ? $unit->subject($supabase ?? app(App\Services\SupabaseClient::class)) : null;
+  $topic = $session->topic;
+  $unit = $topic ? $topic->unit : null;
+  $subject = $unit ? $unit->subject : null;
 @endphp
 
 <div class="session-card bg-white rounded-lg border border-gray-200 p-3 cursor-move hover:shadow-md"

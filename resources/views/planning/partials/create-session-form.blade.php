@@ -38,8 +38,8 @@
             <option value="">{{ __('choose_a_topic') }}</option>
             @foreach($availableTopics as $topic)
               @php
-                $unit = $topic->unit($supabase ?? app(App\Services\SupabaseClient::class));
-                $subject = $unit ? $unit->subject($supabase ?? app(App\Services\SupabaseClient::class)) : null;
+                $unit = $topic->unit;
+                $subject = $unit ? $unit->subject : null;
               @endphp
               <option value="{{ $topic->id }}" data-minutes="{{ $topic->estimated_minutes }}">
                 {{ $topic->title }}

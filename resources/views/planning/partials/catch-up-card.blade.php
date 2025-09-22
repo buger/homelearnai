@@ -1,7 +1,7 @@
 @php
-  $topic = $catchUpSession->topic($supabase ?? app('App\\Services\\SupabaseClient'));
-  $unit = $catchUpSession->unit($supabase ?? app('App\\Services\\SupabaseClient'));
-  $subject = $catchUpSession->subject($supabase ?? app('App\\Services\\SupabaseClient'));
+  $topic = $catchUpSession->topic;
+  $unit = $catchUpSession->unit;
+  $subject = $catchUpSession->subject();
 @endphp
 
 <!-- Catch-Up Session Card -->
