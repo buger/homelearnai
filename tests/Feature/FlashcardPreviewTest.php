@@ -33,7 +33,7 @@ class FlashcardPreviewTest extends TestCase
         $this->user = User::factory()->create();
         $this->subject = Subject::factory()->create(['user_id' => $this->user->id]);
         $this->unit = Unit::factory()->create(['subject_id' => $this->subject->id]);
-        $this->flashcard = Flashcard::factory()->create(['unit_id' => $this->unit->id]);
+        $this->flashcard = Flashcard::factory()->forUnit($this->unit)->create();
 
         $this->actingAs($this->user);
     }

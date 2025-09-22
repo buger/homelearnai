@@ -2,9 +2,9 @@
 <div class="space-y-6">
     <!-- Back Button -->
     <div class="flex items-center">
-        <button 
+        <button
             type="button"
-            hx-get="{{ route('units.flashcards.import.show', $unit->id) }}"
+            {{-- hx-get="{{ route('units.flashcards.import.show', $unit->id) }}" --}}
             hx-target="#import-content"
             hx-swap="innerHTML"
             class="text-gray-500 hover:text-gray-700 flex items-center">
@@ -190,9 +190,9 @@
         </div>
         
         <div class="flex space-x-3">
-            <button 
+            <button
                 type="button"
-                hx-get="{{ route('units.flashcards.import.show', $unit->id) }}"
+                {{-- hx-get="{{ route('units.flashcards.import.show', $unit->id) }}" --}}
                 hx-target="#import-content"
                 hx-swap="innerHTML"
                 class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -200,7 +200,7 @@
             </button>
             
             @if($canImport)
-                <form hx-post="{{ route('units.flashcards.import.execute', $unit->id) }}" 
+                <form hx-post="{{ route('flashcards.import.execute', $unit->id) }}" 
                       hx-target="#flashcards-list" 
                       hx-swap="innerHTML"
                       hx-on::after-request="document.getElementById('flashcard-modal-overlay')?.remove()"

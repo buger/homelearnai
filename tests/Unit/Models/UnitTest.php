@@ -52,20 +52,30 @@ class UnitTest extends TestCase
 
     public function test_unit_has_many_direct_flashcards(): void
     {
-        // Create direct unit flashcards (no topic)
-        $directFlashcards = Flashcard::factory()->count(2)->forUnit($this->unit)->create();
+        // In the topic-only architecture, all flashcards must have a topic_id
+        // The "direct" flashcards relationship returns empty for backward compatibility
 
-        // Create topic flashcards for comparison
+        // Create flashcards via the forUnit method (which creates them via a default topic)
+        $unitBasedFlashcards = Flashcard::factory()->count(2)->forUnit($this->unit)->create();
+
+        // Create additional topic flashcards for comparison
         $topic = Topic::factory()->create(['unit_id' => $this->unit->id]);
         $topicFlashcards = Flashcard::factory()->count(1)->forTopic($topic)->create();
 
-        // Test direct flashcards relationship (should only include unit flashcards, not topic ones)
+        // Test direct flashcards relationship (should be empty in topic-only architecture)
         $unitFlashcards = $this->unit->flashcards;
-        $this->assertCount(2, $unitFlashcards);
+        $this->assertCount(0, $unitFlashcards); // No direct flashcards in topic-only architecture
 
-        foreach ($unitFlashcards as $flashcard) {
+        // But all flashcards created for this unit should be accessible via allFlashcards
+        $allFlashcards = $this->unit->allFlashcards;
+
+        // In topic-only architecture, forUnit() creates flashcards via a default topic
+        // So we should have: 2 flashcards via default topic + 1 flashcard via explicit topic = 3 total
+        $this->assertCount(3, $allFlashcards);
+
+        foreach ($allFlashcards as $flashcard) {
             $this->assertEquals($this->unit->id, $flashcard->unit_id);
-            $this->assertNull($flashcard->topic_id);
+            $this->assertNotNull($flashcard->topic_id); // All must have topic_id in topic-only architecture
         }
     }
 
@@ -74,10 +84,15 @@ class UnitTest extends TestCase
         $activeFlashcard = Flashcard::factory()->forUnit($this->unit)->create(['is_active' => true]);
         $inactiveFlashcard = Flashcard::factory()->forUnit($this->unit)->create(['is_active' => false]);
 
+        // In topic-only architecture, direct flashcards relationship is empty
         $flashcards = $this->unit->flashcards;
+        $this->assertCount(0, $flashcards);
 
-        $this->assertCount(1, $flashcards);
-        $this->assertEquals($activeFlashcard->id, $flashcards->first()->id);
+        // But allFlashcards should only return active ones
+        $allFlashcards = $this->unit->allFlashcards;
+        $this->assertCount(1, $allFlashcards);
+        $this->assertEquals($activeFlashcard->id, $allFlashcards->first()->id);
+        $this->assertTrue($allFlashcards->first()->is_active);
     }
 
     // ==================== All Flashcards (Unit + Topic) Tests ====================
@@ -117,19 +132,23 @@ class UnitTest extends TestCase
 
     public function test_unit_direct_flashcards_count_method(): void
     {
-        // Create mixed flashcards
+        // Create flashcards via forUnit (these will use a default topic)
         Flashcard::factory()->count(2)->forUnit($this->unit)->create();
 
         $topic = Topic::factory()->create(['unit_id' => $this->unit->id]);
         Flashcard::factory()->count(3)->forTopic($topic)->create();
 
-        // Test direct count method (should only count unit flashcards, not topic)
-        $this->assertEquals(2, $this->unit->getDirectFlashcardsCount());
+        // In topic-only architecture, there are no "direct" unit flashcards
+        // All flashcards must have a topic_id, so this method returns 0
+        $this->assertEquals(0, $this->unit->getDirectFlashcardsCount());
+
+        // All flashcards should be accessible via getAllFlashcardsCount
+        $this->assertEquals(5, $this->unit->getAllFlashcardsCount()); // 2 + 3 = 5
     }
 
     public function test_unit_topic_flashcards_count_method(): void
     {
-        // Create mixed flashcards
+        // Create flashcards via forUnit (these use a default topic)
         Flashcard::factory()->count(2)->forUnit($this->unit)->create();
 
         $topic1 = Topic::factory()->create(['unit_id' => $this->unit->id]);
@@ -137,8 +156,12 @@ class UnitTest extends TestCase
         Flashcard::factory()->count(2)->forTopic($topic1)->create();
         Flashcard::factory()->count(1)->forTopic($topic2)->create();
 
-        // Test topic flashcards count method
-        $this->assertEquals(3, $this->unit->getTopicFlashcardsCount());
+        // In topic-only architecture, ALL flashcards are "topic flashcards"
+        // So we should have: 2 (via default topic) + 2 + 1 = 5 total
+        $this->assertEquals(5, $this->unit->getTopicFlashcardsCount());
+
+        // This should equal getAllFlashcardsCount since all flashcards have topics
+        $this->assertEquals($this->unit->getAllFlashcardsCount(), $this->unit->getTopicFlashcardsCount());
     }
 
     // ==================== Flashcard Existence Check Methods ====================
@@ -169,9 +192,13 @@ class UnitTest extends TestCase
         Flashcard::factory()->forTopic($topic)->create();
         $this->assertFalse($this->unit->hasDirectFlashcards());
 
-        // Add direct flashcard
+        // In topic-only architecture, forUnit creates flashcards via default topic
+        // So even after forUnit(), hasDirectFlashcards() should still return false
         Flashcard::factory()->forUnit($this->unit)->create();
-        $this->assertTrue($this->unit->hasDirectFlashcards());
+        $this->assertFalse($this->unit->hasDirectFlashcards()); // Always false in topic-only architecture
+
+        // But hasAnyFlashcards() should return true
+        $this->assertTrue($this->unit->hasAnyFlashcards());
     }
 
     public function test_unit_has_topic_flashcards_method(): void
@@ -179,40 +206,49 @@ class UnitTest extends TestCase
         // Unit with no flashcards
         $this->assertFalse($this->unit->hasTopicFlashcards());
 
-        // Add direct flashcard (should not count as topic)
+        // In topic-only architecture, forUnit() creates topic flashcards via default topic
         Flashcard::factory()->forUnit($this->unit)->create();
-        $this->assertFalse($this->unit->hasTopicFlashcards());
+        $this->assertTrue($this->unit->hasTopicFlashcards()); // Now returns true because all flashcards have topics
 
-        // Add topic flashcard
+        // Add explicit topic flashcard
         $topic = Topic::factory()->create(['unit_id' => $this->unit->id]);
         Flashcard::factory()->forTopic($topic)->create();
         $this->assertTrue($this->unit->hasTopicFlashcards());
+
+        // hasTopicFlashcards should equal hasAnyFlashcards in topic-only architecture
+        $this->assertEquals($this->unit->hasAnyFlashcards(), $this->unit->hasTopicFlashcards());
     }
 
     // ==================== Mixed Scenarios ====================
 
     public function test_unit_with_mixed_flashcard_types(): void
     {
-        // Create a comprehensive scenario
-        $directFlashcards = Flashcard::factory()->count(2)->forUnit($this->unit)->create();
+        // Create a comprehensive scenario in topic-only architecture
+        $unitBasedFlashcards = Flashcard::factory()->count(2)->forUnit($this->unit)->create();
 
         $topic1 = Topic::factory()->create(['unit_id' => $this->unit->id]);
         $topic2 = Topic::factory()->create(['unit_id' => $this->unit->id]);
         $topicFlashcards1 = Flashcard::factory()->count(3)->forTopic($topic1)->create();
         $topicFlashcards2 = Flashcard::factory()->count(1)->forTopic($topic2)->create();
 
-        // Test all counts and existence methods
+        // Test all counts and existence methods for topic-only architecture
+        // Total: 2 (via default topic) + 3 + 1 = 6 flashcards
         $this->assertEquals(6, $this->unit->getAllFlashcardsCount());
-        $this->assertEquals(2, $this->unit->getDirectFlashcardsCount());
-        $this->assertEquals(4, $this->unit->getTopicFlashcardsCount());
+        $this->assertEquals(0, $this->unit->getDirectFlashcardsCount()); // Always 0 in topic-only
+        $this->assertEquals(6, $this->unit->getTopicFlashcardsCount()); // All flashcards are topic flashcards
 
         $this->assertTrue($this->unit->hasAnyFlashcards());
-        $this->assertTrue($this->unit->hasDirectFlashcards());
+        $this->assertFalse($this->unit->hasDirectFlashcards()); // Always false in topic-only
         $this->assertTrue($this->unit->hasTopicFlashcards());
 
         // Test relationship queries
-        $this->assertCount(2, $this->unit->flashcards); // Direct only
-        $this->assertCount(6, $this->unit->allFlashcards()->get()); // All
+        $this->assertCount(0, $this->unit->flashcards); // No direct flashcards in topic-only
+        $this->assertCount(6, $this->unit->allFlashcards()->get()); // All via topics
+
+        // Verify all flashcards have topic_id (topic-only architecture)
+        foreach ($this->unit->allFlashcards as $flashcard) {
+            $this->assertNotNull($flashcard->topic_id);
+        }
     }
 
     public function test_unit_flashcard_soft_deletion_behavior(): void
@@ -238,23 +274,23 @@ class UnitTest extends TestCase
 
     public function test_unit_flashcard_inactive_behavior(): void
     {
-        // Create active and inactive flashcards
-        $activeDirectFlashcard = Flashcard::factory()->forUnit($this->unit)->create(['is_active' => true]);
-        $inactiveDirectFlashcard = Flashcard::factory()->forUnit($this->unit)->create(['is_active' => false]);
+        // Create active and inactive flashcards in topic-only architecture
+        $activeUnitFlashcard = Flashcard::factory()->forUnit($this->unit)->create(['is_active' => true]);
+        $inactiveUnitFlashcard = Flashcard::factory()->forUnit($this->unit)->create(['is_active' => false]);
 
         $topic = Topic::factory()->create(['unit_id' => $this->unit->id]);
         $activeTopicFlashcard = Flashcard::factory()->forTopic($topic)->create(['is_active' => true]);
         $inactiveTopicFlashcard = Flashcard::factory()->forTopic($topic)->create(['is_active' => false]);
 
-        // Methods should only count active flashcards
-        $this->assertEquals(2, $this->unit->getAllFlashcardsCount());
-        $this->assertEquals(1, $this->unit->getDirectFlashcardsCount());
-        $this->assertEquals(1, $this->unit->getTopicFlashcardsCount());
+        // Methods should only count active flashcards in topic-only architecture
+        $this->assertEquals(2, $this->unit->getAllFlashcardsCount()); // 1 active from default topic + 1 active from explicit topic
+        $this->assertEquals(0, $this->unit->getDirectFlashcardsCount()); // Always 0 in topic-only
+        $this->assertEquals(2, $this->unit->getTopicFlashcardsCount()); // Same as getAllFlashcardsCount in topic-only
 
-        $this->assertCount(1, $this->unit->flashcards); // Direct active only
-        $this->assertCount(2, $this->unit->allFlashcards()->get()); // All active
+        $this->assertCount(0, $this->unit->flashcards); // No direct flashcards in topic-only
+        $this->assertCount(2, $this->unit->allFlashcards()->get()); // All active topic flashcards
 
-        // But database should have all 4
+        // But database should have all 4 (both active and inactive)
         $allInDatabase = Flashcard::where('unit_id', $this->unit->id)->get();
         $this->assertCount(4, $allInDatabase);
     }
@@ -305,8 +341,8 @@ class UnitTest extends TestCase
 
     public function test_unit_flashcard_queries_are_efficient(): void
     {
-        // Create a substantial number of flashcards
-        Flashcard::factory()->count(10)->forUnit($this->unit)->create();
+        // Create a substantial number of flashcards in topic-only architecture
+        Flashcard::factory()->count(10)->forUnit($this->unit)->create(); // Via default topic
 
         $topic1 = Topic::factory()->create(['unit_id' => $this->unit->id]);
         $topic2 = Topic::factory()->create(['unit_id' => $this->unit->id]);
@@ -322,10 +358,13 @@ class UnitTest extends TestCase
 
         $endTime = microtime(true);
 
-        // Verify counts
-        $this->assertEquals(10, $directCount);
-        $this->assertEquals(23, $topicCount);
-        $this->assertEquals(33, $allCount);
+        // Verify counts for topic-only architecture
+        $this->assertEquals(0, $directCount); // Always 0 in topic-only
+        $this->assertEquals(33, $topicCount); // 10 + 15 + 8 = 33 (all flashcards have topics)
+        $this->assertEquals(33, $allCount); // Same as topic count in topic-only
+
+        // Verify that topic and all counts are identical in topic-only architecture
+        $this->assertEquals($topicCount, $allCount);
 
         // Verify reasonable performance (should be under 100ms for this dataset)
         $this->assertLessThan(0.1, $endTime - $startTime);

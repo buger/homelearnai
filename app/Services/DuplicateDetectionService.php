@@ -26,16 +26,16 @@ class DuplicateDetectionService
      * Detect duplicates in import data against existing flashcards
      *
      * @param  array  $importCards  Array of cards to import
-     * @param  int  $unitId  Unit ID to check against
+     * @param  int  $topicId  Topic ID to check against
      */
-    public function detectDuplicates(array $importCards, int $unitId): array
+    public function detectDuplicates(array $importCards, int $topicId): array
     {
         try {
             $duplicates = [];
             $uniqueCards = [];
 
-            // Get existing flashcards for this unit
-            $existingCards = $this->getExistingCards($unitId);
+            // Get existing flashcards for this topic
+            $existingCards = $this->getExistingCards($topicId);
 
             foreach ($importCards as $index => $importCard) {
                 $duplicateInfo = $this->findDuplicateCard($importCard, $existingCards, $uniqueCards);
@@ -67,7 +67,7 @@ class DuplicateDetectionService
 
         } catch (\Exception $e) {
             Log::error('Duplicate detection error', [
-                'unit_id' => $unitId,
+                'topic_id' => $topicId,
                 'import_count' => count($importCards),
                 'error' => $e->getMessage(),
             ]);
@@ -86,10 +86,10 @@ class DuplicateDetectionService
      *
      * @param  array  $duplicates  Array of duplicate information
      * @param  array  $strategy  Strategy configuration
-     * @param  int  $unitId  Unit ID
+     * @param  int  $topicId  Topic ID
      * @param  int  $userId  User ID
      */
-    public function applyMergeStrategy(array $duplicates, array $strategy, int $unitId, int $userId): array
+    public function applyMergeStrategy(array $duplicates, array $strategy, int $topicId, int $userId): array
     {
         $results = [
             'skipped' => 0,
@@ -104,7 +104,7 @@ class DuplicateDetectionService
                 $action = $strategy['global_action'] ??
                          ($strategy['actions'][$duplicate['import_index']] ?? 'skip');
 
-                $result = $this->applyDuplicateAction($duplicate, $action, $unitId, $userId);
+                $result = $this->applyDuplicateAction($duplicate, $action, $topicId, $userId);
 
                 if ($result['success']) {
                     $results[$result['action']]++;
@@ -121,7 +121,7 @@ class DuplicateDetectionService
 
         } catch (\Exception $e) {
             Log::error('Merge strategy application error', [
-                'unit_id' => $unitId,
+                'topic_id' => $topicId,
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
             ]);
@@ -356,9 +356,9 @@ class DuplicateDetectionService
     /**
      * Get existing flashcards for comparison
      */
-    private function getExistingCards(int $unitId): array
+    private function getExistingCards(int $topicId): array
     {
-        return Flashcard::where('unit_id', $unitId)
+        return Flashcard::where('topic_id', $topicId)
             ->where('is_active', true)
             ->orderBy('created_at', 'desc')
             ->limit(self::MAX_COMPARISON_LIMIT)
@@ -396,7 +396,7 @@ class DuplicateDetectionService
     /**
      * Apply specific duplicate resolution action
      */
-    private function applyDuplicateAction(array $duplicate, string $action, int $unitId, int $userId): array
+    private function applyDuplicateAction(array $duplicate, string $action, int $topicId, int $userId): array
     {
         try {
             switch ($action) {
@@ -404,13 +404,13 @@ class DuplicateDetectionService
                     return ['success' => true, 'action' => 'skipped'];
 
                 case 'update':
-                    return $this->updateExistingCard($duplicate, $unitId);
+                    return $this->updateExistingCard($duplicate, $topicId);
 
                 case 'replace':
-                    return $this->replaceExistingCard($duplicate, $unitId);
+                    return $this->replaceExistingCard($duplicate, $topicId);
 
                 case 'keep_both':
-                    return $this->keepBothCards($duplicate, $unitId);
+                    return $this->keepBothCards($duplicate, $topicId);
 
                 default:
                     return [
@@ -430,7 +430,7 @@ class DuplicateDetectionService
     /**
      * Update existing card with import data
      */
-    private function updateExistingCard(array $duplicate, int $unitId): array
+    private function updateExistingCard(array $duplicate, int $topicId): array
     {
         if ($duplicate['duplicate_type'] !== 'existing') {
             return ['success' => true, 'action' => 'skipped']; // Can't update within-import duplicates
@@ -459,7 +459,7 @@ class DuplicateDetectionService
     /**
      * Replace existing card with import data
      */
-    private function replaceExistingCard(array $duplicate, int $unitId): array
+    private function replaceExistingCard(array $duplicate, int $topicId): array
     {
         if ($duplicate['duplicate_type'] !== 'existing') {
             return ['success' => true, 'action' => 'skipped'];
@@ -474,7 +474,7 @@ class DuplicateDetectionService
 
         // Replace completely with import data
         $existingCard->update(array_merge($importCard, [
-            'unit_id' => $unitId,
+            'topic_id' => $topicId,
             'is_active' => true,
         ]));
 
@@ -484,13 +484,13 @@ class DuplicateDetectionService
     /**
      * Keep both existing and import cards
      */
-    private function keepBothCards(array $duplicate, int $unitId): array
+    private function keepBothCards(array $duplicate, int $topicId): array
     {
         $importCard = $duplicate['import_card'];
 
         // Create new flashcard from import data
         $flashcard = Flashcard::create(array_merge($importCard, [
-            'unit_id' => $unitId,
+            'topic_id' => $topicId,
             'is_active' => true,
         ]));
 
@@ -500,9 +500,9 @@ class DuplicateDetectionService
     /**
      * Get duplicate detection statistics
      */
-    public function getDetectionStatistics(int $unitId): array
+    public function getDetectionStatistics(int $topicId): array
     {
-        $existingCount = Flashcard::where('unit_id', $unitId)
+        $existingCount = Flashcard::where('topic_id', $topicId)
             ->where('is_active', true)
             ->count();
 

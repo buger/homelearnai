@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Flashcard;
 use App\Models\Subject;
+use App\Models\Topic;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,6 +21,8 @@ class FlashcardCardTypesTest extends TestCase
 
     private Unit $unit;
 
+    private Topic $topic;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -27,6 +30,7 @@ class FlashcardCardTypesTest extends TestCase
         $this->user = User::factory()->create();
         $this->subject = Subject::factory()->for($this->user)->create();
         $this->unit = Unit::factory()->for($this->subject)->create();
+        $this->topic = Topic::factory()->for($this->unit)->create();
     }
 
     #[Test]
@@ -34,7 +38,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'basic',
             'question' => 'What is the capital of France?',
             'answer' => 'Paris',
@@ -60,7 +64,7 @@ class FlashcardCardTypesTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->withSession(['_token' => 'test-token'])
-            ->postJson(route('api.flashcards.store', $this->unit->id), [
+            ->postJson(route('api.topics.flashcards.store', $this->topic->id), [
                 'card_type' => 'multiple_choice',
                 '_token' => 'test-token',
                 'question' => 'Which of these are programming languages?',
@@ -84,7 +88,7 @@ class FlashcardCardTypesTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->withSession(['_token' => 'test-token'])
-            ->postJson(route('api.flashcards.store', $this->unit->id), [
+            ->postJson(route('api.topics.flashcards.store', $this->topic->id), [
                 'card_type' => 'multiple_choice',
                 '_token' => 'test-token',
                 'question' => 'Choose the best option',
@@ -104,7 +108,7 @@ class FlashcardCardTypesTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->withSession(['_token' => 'test-token'])
-            ->postJson(route('api.flashcards.store', $this->unit->id), [
+            ->postJson(route('api.topics.flashcards.store', $this->topic->id), [
                 'card_type' => 'multiple_choice',
                 '_token' => 'test-token',
                 'question' => 'Choose the best option',
@@ -124,7 +128,7 @@ class FlashcardCardTypesTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->withSession(['_token' => 'test-token'])
-            ->postJson(route('api.flashcards.store', $this->unit->id), [
+            ->postJson(route('api.topics.flashcards.store', $this->topic->id), [
                 'card_type' => 'true_false',
                 '_token' => 'test-token',
                 'question' => 'The Earth is round',
@@ -149,7 +153,7 @@ class FlashcardCardTypesTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->withSession(['_token' => 'test-token'])
-            ->postJson(route('api.flashcards.store', $this->unit->id), [
+            ->postJson(route('api.topics.flashcards.store', $this->topic->id), [
                 'card_type' => 'true_false',
                 '_token' => 'test-token',
                 'question' => 'The Earth is flat',
@@ -171,7 +175,7 @@ class FlashcardCardTypesTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->withSession(['_token' => 'test-token'])
-            ->postJson(route('api.flashcards.store', $this->unit->id), [
+            ->postJson(route('api.topics.flashcards.store', $this->topic->id), [
                 'card_type' => 'true_false',
                 '_token' => 'test-token',
                 'question' => 'The Earth is round',
@@ -189,7 +193,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'cloze',
             'cloze_text' => 'The {{capital}} of France is {{Paris}}.',
             'difficulty_level' => 'medium',
@@ -211,7 +215,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'cloze',
             // Missing cloze_text
             'difficulty_level' => 'medium',
@@ -226,7 +230,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'cloze',
             'cloze_text' => 'This text has no cloze deletions.',
             'difficulty_level' => 'medium',
@@ -241,7 +245,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'typed_answer',
             'question' => 'What is the capital of Japan?',
             'answer' => 'Tokyo',
@@ -261,7 +265,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'image_occlusion',
             'question' => 'Identify the highlighted organ',
             'answer' => 'Heart',
@@ -286,7 +290,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'image_occlusion',
             'question' => 'Identify the highlighted organ',
             'answer' => 'Heart',
@@ -303,7 +307,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'image_occlusion',
             'question' => 'Identify the highlighted organ',
             'answer' => 'Heart',
@@ -321,10 +325,10 @@ class FlashcardCardTypesTest extends TestCase
         $this->actingAs($this->user);
 
         // Create a basic flashcard
-        $flashcard = Flashcard::factory()->basic()->for($this->unit)->create();
+        $flashcard = Flashcard::factory()->basic()->forTopic($this->topic)->create();
 
         // Update to multiple choice
-        $response = $this->putJson(route('api.flashcards.update', [$this->unit->id, $flashcard->id]), [
+        $response = $this->putJson(route('api.topics.flashcards.update', [$this->topic->id, $flashcard->id]), [
             'card_type' => 'multiple_choice',
             'question' => 'Updated question',
             'answer' => 'Option A',
@@ -346,7 +350,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'invalid_type',
             'question' => 'Test question',
             'answer' => 'Test answer',
@@ -362,7 +366,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'multiple_choice',
             'question' => 'Choose unique options',
             'answer' => 'Option A',
@@ -380,7 +384,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'multiple_choice',
             'question' => 'Choose the best option',
             'answer' => 'Option A',
@@ -398,7 +402,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'cloze',
             'cloze_text' => 'This has an {{}} empty deletion.',
             'difficulty_level' => 'medium',
@@ -413,7 +417,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'cloze',
             'cloze_text' => 'This has {{nested {{bad}} syntax}}.',
             'difficulty_level' => 'medium',
@@ -428,7 +432,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'image_occlusion',
             'question' => 'Identify the organ',
             'answer' => 'Heart',
@@ -445,7 +449,7 @@ class FlashcardCardTypesTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'cloze',
             'cloze_text' => 'The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell.',
             'difficulty_level' => 'medium',
@@ -464,7 +468,7 @@ class FlashcardCardTypesTest extends TestCase
         $otherUser = User::factory()->create();
         $this->actingAs($otherUser);
 
-        $response = $this->postJson(route('api.flashcards.store', $this->unit->id), [
+        $response = $this->postJson(route('api.topics.flashcards.store', $this->topic->id), [
             'card_type' => 'basic',
             'question' => 'Unauthorized question',
             'answer' => 'Should not work',

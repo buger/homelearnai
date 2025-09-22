@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Flashcard;
 use App\Models\Subject;
+use App\Models\Topic;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\FlashcardExportService;
@@ -25,6 +26,8 @@ class FlashcardExportServiceTest extends TestCase
 
     private Unit $unit;
 
+    private Topic $topic;
+
     private Collection $flashcards;
 
     protected function setUp(): void
@@ -37,12 +40,12 @@ class FlashcardExportServiceTest extends TestCase
         $this->user = User::factory()->create();
         $this->subject = Subject::factory()->create(['user_id' => $this->user->id]);
         $this->unit = Unit::factory()->create(['subject_id' => $this->subject->id]);
+        $this->topic = Topic::factory()->create(['unit_id' => $this->unit->id]);
 
         // Create sample flashcards of different types
         $this->flashcards = collect([
             // Basic card
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forTopic($this->topic)->create([
                 'card_type' => Flashcard::CARD_TYPE_BASIC,
                 'question' => 'What is the capital of France?',
                 'answer' => 'Paris',
@@ -52,8 +55,7 @@ class FlashcardExportServiceTest extends TestCase
             ]),
 
             // Multiple choice card
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forTopic($this->topic)->create([
                 'card_type' => Flashcard::CARD_TYPE_MULTIPLE_CHOICE,
                 'question' => 'What is 2 + 2?',
                 'answer' => '4',
@@ -63,8 +65,7 @@ class FlashcardExportServiceTest extends TestCase
             ]),
 
             // True/False card
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forTopic($this->topic)->create([
                 'card_type' => Flashcard::CARD_TYPE_TRUE_FALSE,
                 'question' => 'The Earth is round.',
                 'answer' => 'True',
@@ -74,8 +75,7 @@ class FlashcardExportServiceTest extends TestCase
             ]),
 
             // Cloze deletion card
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forTopic($this->topic)->create([
                 'card_type' => Flashcard::CARD_TYPE_CLOZE,
                 'question' => 'The capital of France is [...]',
                 'answer' => 'Paris',
@@ -85,8 +85,7 @@ class FlashcardExportServiceTest extends TestCase
             ]),
 
             // Typed answer card
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forTopic($this->topic)->create([
                 'card_type' => Flashcard::CARD_TYPE_TYPED_ANSWER,
                 'question' => 'Name the first president of the United States.',
                 'answer' => 'George Washington',
@@ -404,8 +403,7 @@ class FlashcardExportServiceTest extends TestCase
     #[Test]
     public function it_handles_cards_with_special_characters()
     {
-        $specialCard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
+        $specialCard = Flashcard::factory()->forTopic($this->topic)->create([
             'question' => 'What does "café" mean in English?',
             'answer' => 'Coffee ☕',
             'tags' => ['français', 'café'],

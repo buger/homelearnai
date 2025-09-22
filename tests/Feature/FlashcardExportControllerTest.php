@@ -34,9 +34,8 @@ class FlashcardExportControllerTest extends TestCase
         $this->subject = Subject::factory()->create(['user_id' => $this->user->id]);
         $this->unit = Unit::factory()->create(['subject_id' => $this->subject->id]);
 
-        // Create sample flashcards
-        Flashcard::factory()->count(10)->create([
-            'unit_id' => $this->unit->id,
+        // Create sample flashcards using forUnit factory method for topic-only architecture
+        Flashcard::factory()->count(10)->forUnit($this->unit)->create([
             'card_type' => 'basic',
             'is_active' => true,
         ]);
@@ -124,7 +123,7 @@ class FlashcardExportControllerTest extends TestCase
     public function it_handles_selected_cards_in_preview()
     {
         $this->actingAs($this->user);
-        $selectedCards = $this->unit->flashcards()->take(3)->pluck('id')->toArray();
+        $selectedCards = $this->unit->allFlashcards()->take(3)->pluck('id')->toArray();
 
         $response = $this->post(route('flashcards.export.preview', $this->unit->id), [
             'export_format' => 'csv',
@@ -273,7 +272,7 @@ class FlashcardExportControllerTest extends TestCase
     public function it_handles_export_with_selected_cards_only()
     {
         $this->actingAs($this->user);
-        $selectedCards = $this->unit->flashcards()->take(3)->pluck('id')->toArray();
+        $selectedCards = $this->unit->allFlashcards()->take(3)->pluck('id')->toArray();
 
         $response = $this->post(route('flashcards.export.download', $this->unit->id), [
             'export_format' => 'json',
@@ -343,16 +342,14 @@ class FlashcardExportControllerTest extends TestCase
     public function it_returns_export_statistics()
     {
         // Create flashcards with different types and difficulties
-        Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
+        Flashcard::factory()->forUnit($this->unit)->create([
             'card_type' => 'multiple_choice',
             'difficulty_level' => 'easy',
             'hint' => 'Test hint',
             'tags' => ['test', 'sample'],
         ]);
 
-        Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
+        Flashcard::factory()->forUnit($this->unit)->create([
             'card_type' => 'true_false',
             'difficulty_level' => 'hard',
             'question_image_url' => 'http://example.com/image.jpg',
@@ -427,8 +424,7 @@ class FlashcardExportControllerTest extends TestCase
     public function it_handles_large_exports_with_warning()
     {
         // Create many flashcards to exceed the limit
-        Flashcard::factory()->count(FlashcardExportService::MAX_EXPORT_SIZE + 10)->create([
-            'unit_id' => $this->unit->id,
+        Flashcard::factory()->count(FlashcardExportService::MAX_EXPORT_SIZE + 10)->forUnit($this->unit)->create([
             'is_active' => true,
         ]);
 

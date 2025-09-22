@@ -173,7 +173,7 @@ function generatePreview() {
         </div>
     `;
 
-    fetch('{{ route('units.flashcards.print.preview', $unit->id) }}', {
+    fetch('{{ route('flashcards.print.preview', $unit->id) }}', {
         method: 'POST',
         body: formData,
         headers: {

@@ -301,6 +301,128 @@ class Unit extends Model
     }
 
     /**
+     * Get direct flashcards relationship (topic-independent)
+     * In the topic-only architecture, this returns empty for backward compatibility
+     * because all flashcards must have a topic_id (database constraint)
+     */
+    public function flashcards(): HasMany
+    {
+        // Return empty relationship as there are no unit-level flashcards in topic-only architecture
+        // topic_id is now required (NOT NULL), so whereNull('topic_id') will always return empty
+        return $this->hasMany(Flashcard::class, 'unit_id')
+            ->whereNull('topic_id') // This will always be empty in topic-only architecture
+            ->where('is_active', true);
+    }
+
+    /**
+     * Get all flashcards relationship (unit + topic flashcards)
+     * In the topic-only architecture, this returns all topic flashcards
+     */
+    public function allFlashcards()
+    {
+        // In topic-only architecture, get flashcards from all topics within this unit
+        // This returns a HasManyThrough relationship through topics
+        return $this->hasManyThrough(
+            Flashcard::class,
+            Topic::class,
+            'unit_id', // Foreign key on topics table
+            'topic_id', // Foreign key on flashcards table
+            'id', // Local key on units table
+            'id' // Local key on topics table
+        )->where('flashcards.is_active', true)
+            ->select('flashcards.*'); // Explicitly select flashcards columns to avoid ambiguity
+    }
+
+    /**
+     * Get count of flashcards directly attached to this unit (topic-independent)
+     * In the topic-only architecture, this always returns 0 for backward compatibility
+     */
+    public function getDirectFlashcardsCount(): int
+    {
+        return 0; // In topic-only architecture, there are no unit-level flashcards
+    }
+
+    /**
+     * Get count of flashcards in topics only
+     * In the topic-only architecture, this is the same as getAllFlashcardsCount
+     */
+    public function getTopicFlashcardsCount(): int
+    {
+        return $this->getAllFlashcardsCount();
+    }
+
+    /**
+     * Get total count of all flashcards in this unit (across all topics)
+     * In the topic-only architecture, this sums flashcards from all topics
+     */
+    public function getAllFlashcardsCount(): int
+    {
+        // Check if count was preloaded to avoid N+1 queries
+        if (isset($this->attributes['all_flashcards_count'])) {
+            return (int) $this->attributes['all_flashcards_count'];
+        }
+
+        return $this->topics()
+            ->withCount('flashcards')
+            ->get()
+            ->sum('flashcards_count');
+    }
+
+    /**
+     * Check if unit has any flashcards (direct or topic)
+     */
+    public function hasAnyFlashcards(): bool
+    {
+        return $this->getAllFlashcardsCount() > 0;
+    }
+
+    /**
+     * Check if unit has direct flashcards (topic-independent)
+     * In the topic-only architecture, this always returns false
+     */
+    public function hasDirectFlashcards(): bool
+    {
+        return false; // In topic-only architecture, there are no unit-level flashcards
+    }
+
+    /**
+     * Check if unit has topic flashcards
+     * In the topic-only architecture, this is the same as hasAnyFlashcards
+     */
+    public function hasTopicFlashcards(): bool
+    {
+        return $this->hasAnyFlashcards();
+    }
+
+    /**
+     * Get flashcard counts for multiple units efficiently
+     */
+    public static function getFlashcardCountsForUnits($units): array
+    {
+        if ($units->isEmpty()) {
+            return [];
+        }
+
+        $unitIds = $units->pluck('id')->toArray();
+
+        // Get flashcard counts grouped by unit_id
+        $counts = Flashcard::whereIn('unit_id', $unitIds)
+            ->where('is_active', true)
+            ->selectRaw('unit_id, COUNT(*) as count')
+            ->groupBy('unit_id')
+            ->pluck('count', 'unit_id')
+            ->toArray();
+
+        // Ensure all units are represented, even with 0 count
+        $result = [];
+        foreach ($unitIds as $unitId) {
+            $result[$unitId] = $counts[$unitId] ?? 0;
+        }
+
+        return $result;
+    }
+
+    /**
      * Convert the model instance to an array.
      *
      * Note: This method optimizes for performance by checking for pre-loaded counts

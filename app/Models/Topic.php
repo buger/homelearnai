@@ -137,6 +137,24 @@ class Topic extends Model
     }
 
     /**
+     * Get count of learning materials for this topic
+     */
+    public function getLearningMaterialsCount(): int
+    {
+        // Count non-empty content assets
+        $assets = $this->content_assets ?? [];
+        $count = 0;
+
+        if (! empty($this->learning_content)) {
+            $count++;
+        }
+
+        $count += count($assets);
+
+        return $count;
+    }
+
+    /**
      * Check if topic has rich content
      */
     public function hasRichContent(): bool

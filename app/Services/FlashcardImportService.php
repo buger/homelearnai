@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Flashcard;
+use App\Models\Topic;
 use App\Models\Unit;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -147,6 +148,7 @@ class FlashcardImportService
 
     /**
      * Import flashcards to a specific unit
+     * This will find the first topic in the unit or create a default "Imported Cards" topic
      */
     public function importCards(array $cards, int $unitId, int $userId, string $source = 'manual'): array
     {
@@ -161,6 +163,18 @@ class FlashcardImportService
                 'failed' => count($cards),
                 'errors' => [],
             ];
+        }
+
+        // Find or create a topic for the flashcards
+        $topic = $unit->topics()->first();
+        if (! $topic) {
+            $topic = Topic::create([
+                'unit_id' => $unitId,
+                'title' => 'Imported Cards',
+                'description' => 'Cards imported via import feature',
+                'estimated_minutes' => 30,
+                'required' => false,
+            ]);
         }
 
         $imported = 0;
@@ -179,6 +193,7 @@ class FlashcardImportService
 
                 $flashcard = new Flashcard([
                     'unit_id' => $unitId,
+                    'topic_id' => $topic->id,
                     'card_type' => $processedData['card_type'],
                     'question' => $processedData['question'],
                     'answer' => $processedData['answer'],
@@ -757,18 +772,47 @@ class FlashcardImportService
 
     /**
      * Detect duplicates in import cards
+     * For backward compatibility, this method accepts unitId and finds the first topic
      */
     public function detectDuplicates(array $cards, int $unitId): array
     {
-        return $this->duplicateDetector->detectDuplicates($cards, $unitId);
+        $unit = Unit::findOrFail($unitId);
+        $topic = $unit->topics()->first();
+
+        if (! $topic) {
+            // If no topic exists, return no duplicates found
+            return [
+                'success' => true,
+                'duplicates' => [],
+                'unique_cards' => $cards,
+                'total_import' => count($cards),
+                'duplicate_count' => 0,
+                'unique_count' => count($cards),
+                'existing_cards_checked' => 0,
+            ];
+        }
+
+        return $this->duplicateDetector->detectDuplicates($cards, $topic->id);
     }
 
     /**
      * Apply merge strategy for duplicates
+     * For backward compatibility, this method accepts unitId and finds the first topic
      */
     public function applyMergeStrategy(array $duplicates, array $strategy, int $unitId, int $userId): array
     {
-        return $this->duplicateDetector->applyMergeStrategy($duplicates, $strategy, $unitId, $userId);
+        $unit = Unit::findOrFail($unitId);
+        $topic = $unit->topics()->first();
+
+        if (! $topic) {
+            return [
+                'success' => false,
+                'error' => 'No topic found in unit for duplicate resolution',
+                'results' => [],
+            ];
+        }
+
+        return $this->duplicateDetector->applyMergeStrategy($duplicates, $strategy, $topic->id, $userId);
     }
 
     /**

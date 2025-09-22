@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Flashcard;
 use App\Models\Subject;
+use App\Models\Topic;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,6 +21,8 @@ class FlashcardControllerTest extends TestCase
     protected Subject $subject;
 
     protected Unit $unit;
+
+    protected Topic $topic;
 
     protected function setUp(): void
     {
@@ -46,6 +49,10 @@ class FlashcardControllerTest extends TestCase
         $this->unit = Unit::factory()->create([
             'subject_id' => $this->subject->id,
         ]);
+
+        $this->topic = Topic::factory()->create([
+            'unit_id' => $this->unit->id,
+        ]);
     }
 
     public function test_index_requires_authentication(): void
@@ -53,7 +60,7 @@ class FlashcardControllerTest extends TestCase
         // Ensure user is not authenticated
         auth()->logout();
 
-        $response = $this->getJson("/api/units/{$this->unit->id}/flashcards");
+        $response = $this->getJson("/api/topics/{$this->topic->id}/flashcards");
         $response->assertStatus(401); // Unauthenticated user
     }
 
@@ -61,10 +68,10 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        // Create flashcards for this unit
-        Flashcard::factory()->count(3)->create(['unit_id' => $this->unit->id]);
+        // Create flashcards for this topic
+        Flashcard::factory()->count(3)->forTopic($this->topic)->create();
 
-        $response = $this->getJson("/api/units/{$this->unit->id}/flashcards");
+        $response = $this->getJson("/api/topics/{$this->topic->id}/flashcards");
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -72,7 +79,7 @@ class FlashcardControllerTest extends TestCase
                 'flashcards' => [
                     '*' => [
                         'id',
-                        'unit_id',
+                        'topic_id',
                         'card_type',
                         'question',
                         'answer',
@@ -82,6 +89,7 @@ class FlashcardControllerTest extends TestCase
                         'updated_at',
                     ],
                 ],
+                'topic',
                 'unit',
             ])
             ->assertJsonCount(3, 'flashcards');
@@ -91,7 +99,7 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->otherUser);
 
-        $response = $this->getJson("/api/units/{$this->unit->id}/flashcards");
+        $response = $this->getJson("/api/topics/{$this->topic->id}/flashcards");
         $response->assertStatus(403);
     }
 
@@ -107,7 +115,7 @@ class FlashcardControllerTest extends TestCase
             'difficulty_level' => Flashcard::DIFFICULTY_MEDIUM,
         ];
 
-        $response = $this->postJson("/api/units/{$this->unit->id}/flashcards", $flashcardData);
+        $response = $this->postJson("/api/topics/{$this->topic->id}/flashcards", $flashcardData);
         // With CSRF disabled in tests, unauthenticated requests correctly return 401
         $response->assertStatus(401); // Unauthorized for unauthenticated API requests
     }
@@ -125,7 +133,7 @@ class FlashcardControllerTest extends TestCase
             'tags' => ['geography', 'capitals'],
         ];
 
-        $response = $this->postJson("/api/units/{$this->unit->id}/flashcards", $flashcardData);
+        $response = $this->postJson("/api/topics/{$this->topic->id}/flashcards", $flashcardData);
 
         $response->assertStatus(201)
             ->assertJson([
@@ -142,7 +150,7 @@ class FlashcardControllerTest extends TestCase
             ]);
 
         $this->assertDatabaseHas('flashcards', [
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'question' => 'What is the capital of France?',
             'answer' => 'Paris',
         ]);
@@ -152,7 +160,7 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->postJson("/api/units/{$this->unit->id}/flashcards", []);
+        $response = $this->postJson("/api/topics/{$this->topic->id}/flashcards", []);
 
         $response->assertStatus(422)
             ->assertJson([
@@ -179,7 +187,7 @@ class FlashcardControllerTest extends TestCase
             'correct_choices' => [], // Should not be empty
         ];
 
-        $response = $this->postJson("/api/units/{$this->unit->id}/flashcards", $flashcardData);
+        $response = $this->postJson("/api/topics/{$this->topic->id}/flashcards", $flashcardData);
 
         $response->assertStatus(422)
             ->assertJsonFragment([
@@ -200,7 +208,7 @@ class FlashcardControllerTest extends TestCase
             'difficulty_level' => Flashcard::DIFFICULTY_MEDIUM,
         ];
 
-        $response = $this->postJson("/api/units/{$this->unit->id}/flashcards", $flashcardData);
+        $response = $this->postJson("/api/topics/{$this->topic->id}/flashcards", $flashcardData);
         $response->assertStatus(403);
     }
 
@@ -208,9 +216,9 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $flashcard = Flashcard::factory()->create(['unit_id' => $this->unit->id]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
 
-        $response = $this->getJson("/api/units/{$this->unit->id}/flashcards/{$flashcard->id}");
+        $response = $this->getJson("/api/topics/{$this->topic->id}/flashcards/{$flashcard->id}");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -228,7 +236,7 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->getJson("/api/units/{$this->unit->id}/flashcards/999999");
+        $response = $this->getJson("/api/topics/{$this->topic->id}/flashcards/999999");
         $response->assertStatus(404);
     }
 
@@ -236,7 +244,7 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $flashcard = Flashcard::factory()->basic()->create(['unit_id' => $this->unit->id]);
+        $flashcard = Flashcard::factory()->basic()->forTopic($this->topic)->create();
 
         $updateData = [
             'card_type' => Flashcard::CARD_TYPE_BASIC,
@@ -246,7 +254,7 @@ class FlashcardControllerTest extends TestCase
             'tags' => ['updated', 'tag'],
         ];
 
-        $response = $this->putJson("/api/units/{$this->unit->id}/flashcards/{$flashcard->id}", $updateData);
+        $response = $this->putJson("/api/topics/{$this->topic->id}/flashcards/{$flashcard->id}", $updateData);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -271,9 +279,9 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $flashcard = Flashcard::factory()->create(['unit_id' => $this->unit->id]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
 
-        $response = $this->deleteJson("/api/units/{$this->unit->id}/flashcards/{$flashcard->id}");
+        $response = $this->deleteJson("/api/topics/{$this->topic->id}/flashcards/{$flashcard->id}");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -288,10 +296,10 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $flashcard = Flashcard::factory()->create(['unit_id' => $this->unit->id]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
         $flashcard->delete(); // Soft delete first
 
-        $response = $this->postJson("/api/units/{$this->unit->id}/flashcards/{$flashcard->id}/restore");
+        $response = $this->postJson("/api/topics/{$this->topic->id}/flashcards/{$flashcard->id}/restore");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -309,10 +317,10 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $flashcard = Flashcard::factory()->create(['unit_id' => $this->unit->id]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
         $flashcard->delete(); // Soft delete first
 
-        $response = $this->deleteJson("/api/units/{$this->unit->id}/flashcards/{$flashcard->id}/force");
+        $response = $this->deleteJson("/api/topics/{$this->topic->id}/flashcards/{$flashcard->id}/force");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -328,10 +336,10 @@ class FlashcardControllerTest extends TestCase
         $this->actingAs($this->user);
 
         // Create different types of flashcards
-        Flashcard::factory()->basic()->count(2)->create(['unit_id' => $this->unit->id]);
-        Flashcard::factory()->multipleChoice()->count(1)->create(['unit_id' => $this->unit->id]);
+        Flashcard::factory()->basic()->count(2)->forTopic($this->topic)->create();
+        Flashcard::factory()->multipleChoice()->count(1)->forTopic($this->topic)->create();
 
-        $response = $this->getJson("/api/units/{$this->unit->id}/flashcards/type/basic");
+        $response = $this->getJson("/api/topics/{$this->topic->id}/flashcards/type/basic");
 
         $response->assertStatus(200)
             ->assertJsonCount(2, 'flashcards')
@@ -342,7 +350,7 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->getJson("/api/units/{$this->unit->id}/flashcards/type/invalid_type");
+        $response = $this->getJson("/api/topics/{$this->topic->id}/flashcards/type/invalid_type");
 
         $response->assertStatus(422)
             ->assertJson(['error' => 'Invalid card type']);
@@ -353,13 +361,13 @@ class FlashcardControllerTest extends TestCase
         $this->actingAs($this->user);
 
         $flashcards = Flashcard::factory()->count(3)->create([
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'is_active' => true,
         ]);
 
         $flashcardIds = $flashcards->pluck('id')->toArray();
 
-        $response = $this->patchJson("/api/units/{$this->unit->id}/flashcards/bulk-status", [
+        $response = $this->patchJson("/api/topics/{$this->topic->id}/flashcards/bulk-status", [
             'flashcard_ids' => $flashcardIds,
             'is_active' => false,
         ]);
@@ -382,7 +390,7 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->patchJson("/api/units/{$this->unit->id}/flashcards/bulk-status", [
+        $response = $this->patchJson("/api/topics/{$this->topic->id}/flashcards/bulk-status", [
             'flashcard_ids' => [999999], // Non-existent ID
             'is_active' => false,
         ]);
@@ -400,11 +408,12 @@ class FlashcardControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        // Create another user's unit
+        // Create another user's topic
         $otherSubject = Subject::factory()->create(['user_id' => $this->otherUser->id]);
         $otherUnit = Unit::factory()->create(['subject_id' => $otherSubject->id]);
+        $otherTopic = Topic::factory()->create(['unit_id' => $otherUnit->id]);
 
-        $response = $this->getJson("/api/units/{$otherUnit->id}/flashcards");
+        $response = $this->getJson("/api/topics/{$otherTopic->id}/flashcards");
         $response->assertStatus(403);
     }
 }

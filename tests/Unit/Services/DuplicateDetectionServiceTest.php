@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Flashcard;
+use App\Models\Topic;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\DuplicateDetectionService;
@@ -18,6 +19,8 @@ class DuplicateDetectionServiceTest extends TestCase
     private User $user;
 
     private Unit $unit;
+
+    private Topic $topic;
 
     protected function setUp(): void
     {
@@ -38,13 +41,21 @@ class DuplicateDetectionServiceTest extends TestCase
             'description' => 'Test unit for duplicate detection',
             'subject_id' => $subject->id,
         ]);
+
+        $this->topic = Topic::create([
+            'unit_id' => $this->unit->id,
+            'title' => 'Test Topic',
+            'description' => 'Test topic for duplicate detection',
+            'estimated_minutes' => 30,
+            'required' => true,
+        ]);
     }
 
     public function test_detects_exact_duplicates(): void
     {
         // Create an existing flashcard
         Flashcard::create([
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'card_type' => 'basic',
             'question' => 'What is the capital of France?',
             'answer' => 'Paris',
@@ -65,7 +76,7 @@ class DuplicateDetectionServiceTest extends TestCase
             ],
         ];
 
-        $result = $this->service->detectDuplicates($importCards, $this->unit->id);
+        $result = $this->service->detectDuplicates($importCards, $this->topic->id);
 
         $this->assertTrue($result['success']);
         $this->assertEquals(1, $result['duplicate_count']);
@@ -83,7 +94,7 @@ class DuplicateDetectionServiceTest extends TestCase
     {
         // Create an existing flashcard
         Flashcard::create([
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'card_type' => 'basic',
             'question' => 'What is the capital of France?',
             'answer' => 'Paris',
@@ -99,7 +110,7 @@ class DuplicateDetectionServiceTest extends TestCase
             ],
         ];
 
-        $result = $this->service->detectDuplicates($importCards, $this->unit->id);
+        $result = $this->service->detectDuplicates($importCards, $this->topic->id);
 
         $this->assertTrue($result['success']);
         $this->assertEquals(1, $result['duplicate_count']);
@@ -131,7 +142,7 @@ class DuplicateDetectionServiceTest extends TestCase
             ],
         ];
 
-        $result = $this->service->detectDuplicates($importCards, $this->unit->id);
+        $result = $this->service->detectDuplicates($importCards, $this->topic->id);
 
         $this->assertTrue($result['success']);
         $this->assertEquals(1, $result['duplicate_count']);
@@ -146,7 +157,7 @@ class DuplicateDetectionServiceTest extends TestCase
     {
         // Create an existing flashcard
         Flashcard::create([
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'card_type' => 'basic',
             'question' => 'What is the capital of Germany?',
             'answer' => 'Berlin',
@@ -167,7 +178,7 @@ class DuplicateDetectionServiceTest extends TestCase
             ],
         ];
 
-        $result = $this->service->detectDuplicates($importCards, $this->unit->id);
+        $result = $this->service->detectDuplicates($importCards, $this->topic->id);
 
         $this->assertTrue($result['success']);
         $this->assertEquals(0, $result['duplicate_count']);
@@ -194,7 +205,7 @@ class DuplicateDetectionServiceTest extends TestCase
             'global_action' => 'skip',
         ];
 
-        $result = $this->service->applyMergeStrategy($duplicates, $strategy, $this->unit->id, $this->user->id);
+        $result = $this->service->applyMergeStrategy($duplicates, $strategy, $this->topic->id, $this->user->id);
 
         $this->assertTrue($result['success']);
         $this->assertEquals(1, $result['results']['skipped']);
@@ -206,7 +217,7 @@ class DuplicateDetectionServiceTest extends TestCase
         // Create some existing flashcards
         for ($i = 0; $i < 5; $i++) {
             Flashcard::create([
-                'unit_id' => $this->unit->id,
+                'topic_id' => $this->topic->id,
                 'card_type' => 'basic',
                 'question' => "Question {$i}",
                 'answer' => "Answer {$i}",
@@ -214,7 +225,7 @@ class DuplicateDetectionServiceTest extends TestCase
             ]);
         }
 
-        $stats = $this->service->getDetectionStatistics($this->unit->id);
+        $stats = $this->service->getDetectionStatistics($this->topic->id);
 
         $this->assertEquals(5, $stats['existing_cards']);
         $this->assertEquals(5, $stats['will_check_against']);

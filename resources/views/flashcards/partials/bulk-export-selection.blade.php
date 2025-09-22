@@ -318,7 +318,7 @@ function bulkExportSelection() {
             
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '{{ route('units.flashcards.export.preview', $unit->id) }}';
+            form.action = '{{ route('flashcards.export.preview', $unit->id) }}';
             form.style.display = 'none';
             
             // Add CSRF token

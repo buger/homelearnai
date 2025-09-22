@@ -39,42 +39,53 @@ class FlashcardTest extends TestCase
         ]);
     }
 
-    public function test_flashcard_belongs_to_unit(): void
+    public function test_flashcard_belongs_to_unit_through_topic(): void
     {
-        $flashcard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
-        ]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
+        $flashcard->load('topic.unit'); // Ensure topic and unit are loaded
 
+        // unit_id is computed from the topic relationship
+        $this->assertEquals($this->unit->id, $flashcard->unit_id);
+
+        // Access unit through topic relationship (proper Eloquent way)
+        $this->assertInstanceOf(Unit::class, $flashcard->topic->unit);
+        $this->assertEquals($this->unit->id, $flashcard->topic->unit->id);
+
+        // Test the direct unit relationship
         $this->assertInstanceOf(Unit::class, $flashcard->unit);
         $this->assertEquals($this->unit->id, $flashcard->unit->id);
     }
 
-    public function test_flashcard_belongs_to_subject_through_unit(): void
+    public function test_flashcard_belongs_to_subject_through_topic(): void
     {
-        $flashcard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
-        ]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
+        $flashcard->load('topic.unit.subject'); // Ensure the full chain is loaded
 
-        // This tests the hasOneThrough relationship
-        $this->assertInstanceOf(Subject::class, $flashcard->subject()->first());
-        $this->assertEquals($this->subject->id, $flashcard->subject()->first()->id);
+        // Access subject through proper Eloquent relationships
+        $this->assertInstanceOf(Subject::class, $flashcard->topic->unit->subject);
+        $this->assertEquals($this->subject->id, $flashcard->topic->unit->subject->id);
+
+        // Test the convenience method
+        $this->assertInstanceOf(Subject::class, $flashcard->subject());
+        $this->assertEquals($this->subject->id, $flashcard->subject()->id);
     }
 
-    public function test_unit_has_many_flashcards(): void
+    public function test_topic_has_many_flashcards(): void
     {
-        $flashcards = Flashcard::factory()->count(3)->create([
-            'unit_id' => $this->unit->id,
-        ]);
+        $flashcards = Flashcard::factory()->count(3)->forTopic($this->topic)->create();
 
-        $this->assertCount(3, $this->unit->flashcards);
-        $this->assertInstanceOf(Flashcard::class, $this->unit->flashcards->first());
+        $this->assertCount(3, $this->topic->flashcards);
+        $this->assertInstanceOf(Flashcard::class, $this->topic->flashcards->first());
+
+        // Verify all flashcards belong to the correct topic
+        foreach ($flashcards as $flashcard) {
+            $this->assertEquals($this->topic->id, $flashcard->topic_id);
+        }
     }
 
     public function test_soft_delete_functionality(): void
     {
-        $flashcard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
-        ]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
 
         // Test soft delete
         $flashcard->delete();
@@ -85,14 +96,11 @@ class FlashcardTest extends TestCase
 
     public function test_soft_deleted_flashcards_excluded_from_active_scope(): void
     {
-        $activeFlashcard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
+        $activeFlashcard = Flashcard::factory()->forTopic($this->topic)->create([
             'is_active' => true,
         ]);
 
-        $deletedFlashcard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
-        ]);
+        $deletedFlashcard = Flashcard::factory()->forTopic($this->topic)->create();
         $deletedFlashcard->delete();
 
         $activeFlashcards = Flashcard::active()->get();
@@ -103,9 +111,7 @@ class FlashcardTest extends TestCase
 
     public function test_flashcard_can_be_restored_after_soft_delete(): void
     {
-        $flashcard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
-        ]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
 
         $flashcard->delete();
         $this->assertSoftDeleted('flashcards', ['id' => $flashcard->id]);
@@ -120,7 +126,7 @@ class FlashcardTest extends TestCase
     public function test_flashcard_validation_for_multiple_choice(): void
     {
         $flashcard = new Flashcard([
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'card_type' => Flashcard::CARD_TYPE_MULTIPLE_CHOICE,
             'question' => 'Test question',
             'answer' => 'Test answer',
@@ -135,7 +141,7 @@ class FlashcardTest extends TestCase
     public function test_flashcard_validation_fails_for_invalid_multiple_choice(): void
     {
         $flashcard = new Flashcard([
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'card_type' => Flashcard::CARD_TYPE_MULTIPLE_CHOICE,
             'question' => 'Test question',
             'answer' => 'Test answer',
@@ -152,7 +158,7 @@ class FlashcardTest extends TestCase
     public function test_flashcard_validation_for_cloze_deletion(): void
     {
         $flashcard = new Flashcard([
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'card_type' => Flashcard::CARD_TYPE_CLOZE,
             'question' => 'Test question',
             'answer' => 'Test answer',
@@ -167,7 +173,7 @@ class FlashcardTest extends TestCase
     public function test_flashcard_validation_fails_for_invalid_cloze(): void
     {
         $flashcard = new Flashcard([
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id,
             'card_type' => Flashcard::CARD_TYPE_CLOZE,
             'question' => 'Test question',
             'answer' => 'Test answer',
@@ -181,14 +187,12 @@ class FlashcardTest extends TestCase
 
     public function test_flashcard_scopes(): void
     {
-        $basicCard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
+        $basicCard = Flashcard::factory()->forTopic($this->topic)->create([
             'card_type' => Flashcard::CARD_TYPE_BASIC,
             'difficulty_level' => Flashcard::DIFFICULTY_EASY,
         ]);
 
-        $multipleChoiceCard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
+        $multipleChoiceCard = Flashcard::factory()->forTopic($this->topic)->create([
             'card_type' => Flashcard::CARD_TYPE_MULTIPLE_CHOICE,
             'difficulty_level' => Flashcard::DIFFICULTY_HARD,
         ]);
@@ -203,16 +207,14 @@ class FlashcardTest extends TestCase
         $this->assertCount(1, $easyCards);
         $this->assertEquals($basicCard->id, $easyCards->first()->id);
 
-        // Test forUnit scope
-        $unitCards = Flashcard::forUnit($this->unit->id);
-        $this->assertCount(2, $unitCards);
+        // Test forTopic scope instead of forUnit
+        $topicCards = Flashcard::forTopic($this->topic->id);
+        $this->assertCount(2, $topicCards);
     }
 
     public function test_flashcard_access_control(): void
     {
-        $flashcard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
-        ]);
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
 
         // Test user can access their own flashcard
         $this->assertTrue($flashcard->canBeAccessedBy($this->user->id));
@@ -253,8 +255,7 @@ class FlashcardTest extends TestCase
 
     public function test_flashcard_to_array(): void
     {
-        $flashcard = Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create([
             'card_type' => Flashcard::CARD_TYPE_BASIC,
             'question' => 'Test question',
             'answer' => 'Test answer',
@@ -264,6 +265,7 @@ class FlashcardTest extends TestCase
 
         $this->assertArrayHasKey('id', $array);
         $this->assertArrayHasKey('unit_id', $array);
+        $this->assertArrayHasKey('topic_id', $array);
         $this->assertArrayHasKey('card_type', $array);
         $this->assertArrayHasKey('question', $array);
         $this->assertArrayHasKey('answer', $array);
@@ -288,23 +290,13 @@ class FlashcardTest extends TestCase
         $this->assertEquals($this->topic->id, $flashcard->topic_id);
     }
 
-    public function test_flashcard_can_exist_without_topic(): void
+    public function test_flashcard_cannot_exist_without_topic(): void
     {
-        $flashcard = Flashcard::factory()->forUnit($this->unit)->create();
+        // In the new architecture, all flashcards must belong to a topic
+        $this->expectException(\Exception::class);
 
-        $this->assertNull($flashcard->topic);
-        $this->assertNull($flashcard->topic_id);
-        $this->assertEquals($this->unit->id, $flashcard->unit_id);
-    }
-
-    public function test_flashcard_belongs_to_subject_through_topic(): void
-    {
-        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
-
-        // Test subject relationship through topic
-        $subject = $flashcard->subject()->first();
-        $this->assertInstanceOf(Subject::class, $subject);
-        $this->assertEquals($this->subject->id, $subject->id);
+        // This should fail because topic_id is required
+        Flashcard::factory()->create(['topic_id' => null]);
     }
 
     public function test_flashcard_access_control_with_topic(): void
@@ -321,21 +313,20 @@ class FlashcardTest extends TestCase
 
     public function test_flashcard_for_topic_scope(): void
     {
-        // Create flashcards for different contexts
+        // Create flashcards for different topics
         $topicFlashcard = Flashcard::factory()->forTopic($this->topic)->create();
-        $unitFlashcard = Flashcard::factory()->forUnit($this->unit)->create();
         $otherTopic = Topic::factory()->create(['unit_id' => $this->unit->id]);
         $otherTopicFlashcard = Flashcard::factory()->forTopic($otherTopic)->create();
 
-        // Test forTopic scope
+        // Test forTopic scope returns only flashcards for specific topic
         $topicFlashcards = Flashcard::forTopic($this->topic->id);
         $this->assertCount(1, $topicFlashcards);
         $this->assertEquals($topicFlashcard->id, $topicFlashcards->first()->id);
 
-        // Test forUnit scope still works for unit flashcards
-        $unitFlashcards = Flashcard::forUnit($this->unit->id);
-        $this->assertCount(1, $unitFlashcards);
-        $this->assertEquals($unitFlashcard->id, $unitFlashcards->first()->id);
+        // Test forTopic scope for other topic
+        $otherTopicFlashcards = Flashcard::forTopic($otherTopic->id);
+        $this->assertCount(1, $otherTopicFlashcards);
+        $this->assertEquals($otherTopicFlashcard->id, $otherTopicFlashcards->first()->id);
     }
 
     public function test_topic_flashcard_maintains_unit_relationship(): void
@@ -356,38 +347,39 @@ class FlashcardTest extends TestCase
         $this->assertEquals(Flashcard::CARD_TYPE_BASIC, $flashcard->card_type);
     }
 
-    public function test_flashcard_factory_for_unit_method(): void
+    public function test_flashcard_factory_for_topic_with_card_types(): void
     {
-        $flashcard = Flashcard::factory()->forUnit($this->unit)->multipleChoice()->create();
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->multipleChoice()->create();
 
-        $this->assertNull($flashcard->topic_id);
+        $this->assertNotNull($flashcard->topic_id);
+        $this->assertEquals($this->topic->id, $flashcard->topic_id);
         $this->assertEquals($this->unit->id, $flashcard->unit_id);
         $this->assertEquals(Flashcard::CARD_TYPE_MULTIPLE_CHOICE, $flashcard->card_type);
     }
 
-    public function test_mixed_topic_and_unit_flashcards_in_same_unit(): void
+    public function test_multiple_topics_flashcards_in_same_unit(): void
     {
-        // Create flashcards both directly on unit and through topics
-        $unitFlashcard = Flashcard::factory()->forUnit($this->unit)->create();
+        // Create flashcards through different topics in the same unit
         $topicFlashcard1 = Flashcard::factory()->forTopic($this->topic)->create();
 
         $topic2 = Topic::factory()->create(['unit_id' => $this->unit->id]);
         $topicFlashcard2 = Flashcard::factory()->forTopic($topic2)->create();
 
-        // Test that unit can have mixed flashcard types
-        $allUnitFlashcards = Flashcard::where('unit_id', $this->unit->id)->get();
-        $this->assertCount(3, $allUnitFlashcards);
+        // All flashcards should belong to topics in the same unit
+        $allUnitFlashcards = Flashcard::whereHas('topic', function ($query) {
+            $query->where('unit_id', $this->unit->id);
+        })->get();
+        $this->assertCount(2, $allUnitFlashcards);
 
-        // Test different counts
-        $directUnitFlashcards = Flashcard::where('unit_id', $this->unit->id)
-            ->whereNull('topic_id')
-            ->get();
-        $this->assertCount(1, $directUnitFlashcards);
-
-        $topicFlashcards = Flashcard::where('unit_id', $this->unit->id)
-            ->whereNotNull('topic_id')
-            ->get();
+        // All flashcards should have topic_id (none should be null)
+        $topicFlashcards = Flashcard::whereHas('topic', function ($query) {
+            $query->where('unit_id', $this->unit->id);
+        })->whereNotNull('topic_id')->get();
         $this->assertCount(2, $topicFlashcards);
+
+        // No flashcards should exist without topic_id (in the new architecture)
+        $directUnitFlashcards = Flashcard::whereNull('topic_id')->get();
+        $this->assertCount(0, $directUnitFlashcards);
     }
 
     public function test_flashcard_to_array_includes_topic_id(): void
@@ -413,18 +405,18 @@ class FlashcardTest extends TestCase
         $this->assertEmpty($errors, 'Topic-based flashcard should validate correctly');
     }
 
-    public function test_static_methods_backward_compatibility(): void
+    public function test_static_methods_topic_only_architecture(): void
     {
-        // Create flashcards using different approaches
-        $unitFlashcard = Flashcard::factory()->forUnit($this->unit)->create();
+        // Create flashcards using topic-only approach
         $topicFlashcard = Flashcard::factory()->forTopic($this->topic)->create();
+        $otherTopic = Topic::factory()->create(['unit_id' => $this->unit->id]);
+        $otherTopicFlashcard = Flashcard::factory()->forTopic($otherTopic)->create();
 
-        // Test static forUnit method returns unit flashcards only
+        // Test static forUnit method returns empty (no unit-only flashcards exist)
         $unitFlashcards = Flashcard::forUnit($this->unit->id);
-        $this->assertCount(1, $unitFlashcards);
-        $this->assertEquals($unitFlashcard->id, $unitFlashcards->first()->id);
+        $this->assertCount(0, $unitFlashcards, 'forUnit should return empty as all flashcards now belong to topics');
 
-        // Test static forTopic method
+        // Test static forTopic method works correctly
         $topicFlashcards = Flashcard::forTopic($this->topic->id);
         $this->assertCount(1, $topicFlashcards);
         $this->assertEquals($topicFlashcard->id, $topicFlashcards->first()->id);

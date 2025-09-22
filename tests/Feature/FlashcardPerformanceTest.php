@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Flashcard;
 use App\Models\Subject;
+use App\Models\Topic;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\FlashcardCacheService;
@@ -23,6 +24,8 @@ class FlashcardPerformanceTest extends TestCase
 
     private Unit $unit;
 
+    private Topic $topic;
+
     private FlashcardCacheService $cacheService;
 
     private FlashcardPerformanceService $performanceService;
@@ -36,6 +39,7 @@ class FlashcardPerformanceTest extends TestCase
         $this->user = User::factory()->create();
         $this->subject = Subject::factory()->create(['user_id' => $this->user->id]);
         $this->unit = Unit::factory()->create(['subject_id' => $this->subject->id]);
+        $this->topic = Topic::factory()->create(['unit_id' => $this->unit->id]);
 
         $this->cacheService = app(FlashcardCacheService::class);
         $this->performanceService = app(FlashcardPerformanceService::class);
@@ -47,8 +51,7 @@ class FlashcardPerformanceTest extends TestCase
     public function test_flashcard_list_performance_with_large_dataset()
     {
         // Create 1000 flashcards
-        Flashcard::factory()->count(1000)->create([
-            'unit_id' => $this->unit->id,
+        Flashcard::factory()->count(1000)->forUnit($this->unit)->create([
             'is_active' => true,
         ]);
 
@@ -60,6 +63,7 @@ class FlashcardPerformanceTest extends TestCase
         $duration = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
 
         $response->assertStatus(200);
+
         $response->assertJsonStructure([
             'success',
             'flashcards',
@@ -93,8 +97,7 @@ class FlashcardPerformanceTest extends TestCase
         ];
 
         foreach (range(1, 500) as $i) {
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'question' => $questions[$i % count($questions)]." Question {$i}",
                 'answer' => "Answer for question {$i}",
                 'is_active' => true,
@@ -138,8 +141,7 @@ class FlashcardPerformanceTest extends TestCase
     public function test_cache_service_performance()
     {
         // Create flashcards
-        Flashcard::factory()->count(100)->create([
-            'unit_id' => $this->unit->id,
+        Flashcard::factory()->count(100)->forUnit($this->unit)->create([
             'is_active' => true,
         ]);
 
@@ -163,8 +165,7 @@ class FlashcardPerformanceTest extends TestCase
     {
         // Create searchable flashcards
         foreach (range(1, 200) as $i) {
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'question' => "Mathematics question {$i}",
                 'answer' => "Mathematical answer {$i}",
                 'card_type' => ['basic', 'multiple_choice', 'cloze'][$i % 3],
@@ -187,8 +188,7 @@ class FlashcardPerformanceTest extends TestCase
     {
         // Create diverse flashcards
         foreach (range(1, 100) as $i) {
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'question' => "Question {$i}",
                 'answer' => "Answer {$i}",
                 'card_type' => Flashcard::getCardTypes()[$i % count(Flashcard::getCardTypes())],
@@ -260,8 +260,7 @@ class FlashcardPerformanceTest extends TestCase
     public function test_cache_invalidation_performance()
     {
         // Create flashcards and cache them
-        Flashcard::factory()->count(50)->create([
-            'unit_id' => $this->unit->id,
+        Flashcard::factory()->count(50)->forUnit($this->unit)->create([
             'is_active' => true,
         ]);
 
@@ -286,9 +285,8 @@ class FlashcardPerformanceTest extends TestCase
 
     public function test_concurrent_request_handling()
     {
-        // Create flashcards
-        Flashcard::factory()->count(100)->create([
-            'unit_id' => $this->unit->id,
+        // Create flashcards using the forUnit method for proper topic assignment
+        Flashcard::factory()->count(100)->forUnit($this->unit)->create([
             'is_active' => true,
         ]);
 
@@ -319,8 +317,7 @@ class FlashcardPerformanceTest extends TestCase
 
         foreach (range(1, 100) as $i) {
             $term = $commonTerms[$i % count($commonTerms)];
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'question' => "{$term} question {$i}",
                 'answer' => "{$term} answer {$i}",
                 'is_active' => true,
@@ -344,8 +341,7 @@ class FlashcardPerformanceTest extends TestCase
         \DB::enableQueryLog();
 
         // Create test data
-        Flashcard::factory()->count(50)->create([
-            'unit_id' => $this->unit->id,
+        Flashcard::factory()->count(50)->forUnit($this->unit)->create([
             'is_active' => true,
         ]);
 

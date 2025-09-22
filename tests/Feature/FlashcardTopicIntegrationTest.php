@@ -163,7 +163,16 @@ class FlashcardTopicIntegrationTest extends TestCase
             $topic2Flashcards[] = $response->json('flashcard.id');
         }
 
-        // Unit flashcards (no topic)
+        // Create a default topic explicitly to ensure it's separate
+        $defaultTopic = Topic::create([
+            'unit_id' => $this->unit->id,
+            'title' => 'Default Topic for Unit Tests',
+            'description' => 'Auto-created topic for unit-level flashcards (backward compatibility)',
+            'required' => false,
+            'estimated_minutes' => 30,
+        ]);
+
+        // Create flashcards via unit endpoint (should use the default topic)
         for ($i = 1; $i <= 2; $i++) {
             $response = $this->postJson("/api/units/{$this->unit->id}/flashcards", [
                 'card_type' => Flashcard::CARD_TYPE_BASIC,
@@ -171,7 +180,13 @@ class FlashcardTopicIntegrationTest extends TestCase
                 'answer' => "Unit Answer {$i}",
                 'difficulty_level' => Flashcard::DIFFICULTY_HARD,
             ]);
-            $unitFlashcards[] = $response->json('flashcard.id');
+            $response->assertStatus(201);
+            $flashcardData = $response->json('flashcard');
+            $unitFlashcards[] = $flashcardData['id'];
+
+            // Verify unit flashcards get assigned to the default topic
+            $this->assertEquals($defaultTopic->id, $flashcardData['topic_id'],
+                "Unit flashcard {$i} should be assigned to default topic");
         }
 
         // Verify data integrity
@@ -199,22 +214,32 @@ class FlashcardTopicIntegrationTest extends TestCase
             $this->assertContains($flashcard['id'], $topic2Flashcards);
         }
 
-        // Test unit endpoint returns only unit flashcards (no topic_id)
+        // Verify the default topic exists (created earlier)
+        $this->assertNotNull($defaultTopic, 'Default topic should exist for unit flashcards');
+
+        // Verify unit flashcards are in the default topic (not topic1 or topic2)
+        $defaultTopicResponse = $this->getJson("/api/topics/{$defaultTopic->id}/flashcards");
+        $defaultTopicResponse->assertStatus(200)->assertJsonCount(2, 'flashcards');
+
+        // Test unit endpoint returns all flashcards from all topics in the unit
         $unitResponse = $this->getJson("/api/units/{$this->unit->id}/flashcards");
-        $unitResponse->assertStatus(200)->assertJsonCount(2, 'flashcards');
+        $unitResponse->assertStatus(200)->assertJsonCount(7, 'flashcards'); // 3 + 2 + 2 = 7 total
 
         $unitData = $unitResponse->json('flashcards');
+        $allFlashcardIds = array_merge($topic1Flashcards, $topic2Flashcards, $unitFlashcards);
+
+        // Verify all flashcards have topic_id (topic-only architecture)
         foreach ($unitData as $flashcard) {
-            $this->assertNull($flashcard['topic_id']);
-            $this->assertContains($flashcard['id'], $unitFlashcards);
+            $this->assertNotNull($flashcard['topic_id'], 'All flashcards must have topic_id in topic-only architecture');
+            $this->assertContains($flashcard['id'], $allFlashcardIds);
         }
 
-        // Test Unit model methods
+        // Test Unit model methods (topic-only architecture: no direct flashcards)
         $unit = Unit::find($this->unit->id);
-        $this->assertEquals(2, $unit->getDirectFlashcardsCount());
-        $this->assertEquals(5, $unit->getTopicFlashcardsCount()); // 3 + 2
-        $this->assertEquals(7, $unit->getAllFlashcardsCount()); // 2 + 3 + 2
-        $this->assertTrue($unit->hasDirectFlashcards());
+        $this->assertEquals(0, $unit->getDirectFlashcardsCount(), 'Units should have no direct flashcards in topic-only architecture');
+        $this->assertEquals(7, $unit->getTopicFlashcardsCount()); // 3 + 2 + 2 from all topics
+        $this->assertEquals(7, $unit->getAllFlashcardsCount()); // All flashcards via topics
+        $this->assertFalse($unit->hasDirectFlashcards(), 'Units should have no direct flashcards in topic-only architecture');
         $this->assertTrue($unit->hasTopicFlashcards());
         $this->assertTrue($unit->hasAnyFlashcards());
 
@@ -262,16 +287,15 @@ class FlashcardTopicIntegrationTest extends TestCase
         $topic2Response = $this->getJson("/api/topics/{$this->topic2->id}/flashcards");
         $topic2Response->assertJsonCount(1, 'flashcards');
 
-        // Step 2: Move from topic 2 to unit directly (no topic)
-        $moveToUnit = $this->postJson("/api/flashcards/{$flashcardId}/move", [
-            'topic_id' => null,
-            'unit_id' => $this->unit->id,
+        // Step 2: Move from topic 2 back to topic 1 (topic-only architecture)
+        $moveBackToTopic1 = $this->postJson("/api/flashcards/{$flashcardId}/move", [
+            'topic_id' => $this->topic1->id,
         ]);
 
-        $moveToUnit->assertStatus(200);
+        $moveBackToTopic1->assertStatus(200);
         $this->assertDatabaseHas('flashcards', [
             'id' => $flashcardId,
-            'topic_id' => null,
+            'topic_id' => $this->topic1->id,
             'unit_id' => $this->unit->id,
         ]);
 
@@ -279,17 +303,13 @@ class FlashcardTopicIntegrationTest extends TestCase
         $topic2Response = $this->getJson("/api/topics/{$this->topic2->id}/flashcards");
         $topic2Response->assertJsonCount(0, 'flashcards');
 
-        // Verify it's now in unit
+        // Verify it's back in topic 1
+        $topic1Response = $this->getJson("/api/topics/{$this->topic1->id}/flashcards");
+        $topic1Response->assertJsonCount(1, 'flashcards');
+
+        // Verify unit endpoint still shows the flashcard (now in topic 1)
         $unitResponse = $this->getJson("/api/units/{$this->unit->id}/flashcards");
         $unitResponse->assertJsonCount(1, 'flashcards');
-
-        // Step 3: Move from unit back to topic 1
-        $moveBackToTopic = $this->postJson("/api/flashcards/{$flashcardId}/move", [
-            'topic_id' => $this->topic1->id,
-            'unit_id' => $this->unit->id,
-        ]);
-
-        $moveBackToTopic->assertStatus(200);
         $this->assertDatabaseHas('flashcards', [
             'id' => $flashcardId,
             'topic_id' => $this->topic1->id,
@@ -301,6 +321,6 @@ class FlashcardTopicIntegrationTest extends TestCase
         $topic1Response->assertJsonCount(1, 'flashcards');
 
         $unitResponse = $this->getJson("/api/units/{$this->unit->id}/flashcards");
-        $unitResponse->assertJsonCount(0, 'flashcards');
+        $unitResponse->assertJsonCount(1, 'flashcards'); // Should have 1 flashcard (now in topic1)
     }
 }

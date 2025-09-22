@@ -4,6 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Models\Flashcard;
 use App\Models\Subject;
+use App\Models\Topic;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\FlashcardImportService;
@@ -24,6 +25,8 @@ class FlashcardImportServiceTest extends TestCase
 
     private Unit $unit;
 
+    private Topic $topic;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -35,6 +38,13 @@ class FlashcardImportServiceTest extends TestCase
         $this->user = User::factory()->create();
         $this->subject = Subject::factory()->for($this->user)->create();
         $this->unit = Unit::factory()->for($this->subject)->create();
+        $this->topic = Topic::create([
+            'unit_id' => $this->unit->id,
+            'title' => 'Test Topic',
+            'description' => 'Test topic for import testing',
+            'estimated_minutes' => 30,
+            'required' => true,
+        ]);
     }
 
     #[Test]
@@ -204,6 +214,7 @@ class FlashcardImportServiceTest extends TestCase
         $this->assertEquals('What is 2+2?', $basicCard->question);
         $this->assertEquals('4', $basicCard->answer);
         $this->assertEquals('test_import', $basicCard->import_source);
+        $this->assertEquals($this->topic->id, $basicCard->topic_id);
 
         // Verify second card
         $mcCard = Flashcard::where('card_type', 'multiple_choice')->first();

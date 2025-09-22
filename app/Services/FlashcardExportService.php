@@ -276,11 +276,15 @@ class FlashcardExportService
 
         if ($includeMetadata && $flashcards->isNotEmpty()) {
             $firstCard = $flashcards->first();
-            $unit = $firstCard->unit;
+
+            // Ensure the topic and unit are loaded
+            $firstCard->load('topic.unit.subject');
+
+            $unit = $firstCard->unit;  // Access as property
             $data['unit'] = [
-                'id' => $unit->id,
-                'name' => $unit->name,
-                'subject_id' => $unit->subject_id,
+                'id' => $unit->id ?? null,
+                'name' => $unit->name ?? null,
+                'subject_id' => $unit->subject_id ?? null,
                 'subject_name' => $unit->subject->name ?? null,
             ];
         }
@@ -778,5 +782,82 @@ class FlashcardExportService
             'progress' => 100,
             'message' => 'Export completed successfully',
         ];
+    }
+
+    /**
+     * Generate preview data for the export
+     */
+    public function generatePreviewData(Collection|EloquentCollection $flashcards, string $format): array
+    {
+        $sampleSize = min($flashcards->count(), 3);
+        $samples = $flashcards->take($sampleSize);
+        $previewData = [
+            'total_count' => $flashcards->count(),
+            'sample_count' => $sampleSize,
+            'samples' => [],
+        ];
+
+        switch ($format) {
+            case 'json':
+                $previewData['description'] = 'JSON format includes all flashcard data with metadata and relationships.';
+                $previewData['samples'] = [
+                    [
+                        'structure' => 'Array of flashcard objects',
+                        'features' => 'Full metadata, topics, creation dates, statistics',
+                    ],
+                ];
+                break;
+
+            case 'anki':
+                $previewData['description'] = 'Anki package (.apkg) format for importing into Anki spaced repetition software.';
+                foreach ($samples as $flashcard) {
+                    $previewData['samples'][] = [
+                        'question' => substr($flashcard->question, 0, 100).(strlen($flashcard->question) > 100 ? '...' : ''),
+                        'answer' => substr($flashcard->answer, 0, 100).(strlen($flashcard->answer) > 100 ? '...' : ''),
+                        'type' => $flashcard->card_type ?? 'basic',
+                    ];
+                }
+                break;
+
+            case 'csv':
+                $previewData['description'] = 'Extended CSV format with all flashcard fields and metadata.';
+                $previewData['samples'] = [
+                    'CSV Headers: Question, Answer, Type, Difficulty, Topic, Tags, Hint, Created At',
+                ];
+                break;
+
+            case 'quizlet':
+                $previewData['description'] = 'Tab-separated values format compatible with Quizlet import.';
+                foreach ($samples as $flashcard) {
+                    $previewData['samples'][] = [
+                        'example' => substr($flashcard->question, 0, 50)."\t".substr($flashcard->answer, 0, 50),
+                    ];
+                }
+                break;
+
+            case 'mnemosyne':
+                $previewData['description'] = 'XML format for Mnemosyne spaced repetition software.';
+                $previewData['samples'] = [
+                    [
+                        'xml_format' => '&lt;item&gt;&lt;Q&gt;Question&lt;/Q&gt;&lt;A&gt;Answer&lt;/A&gt;&lt;/item&gt;',
+                    ],
+                ];
+                break;
+
+            case 'supermemo':
+                $previewData['description'] = 'Plain text Q&A format for SuperMemo software.';
+                foreach ($samples as $flashcard) {
+                    $previewData['samples'][] = [
+                        'example' => 'Q: '.substr($flashcard->question, 0, 50)."\nA: ".substr($flashcard->answer, 0, 50),
+                    ];
+                }
+                break;
+
+            default:
+                $previewData['description'] = 'Export format preview';
+                break;
+        }
+
+        return $previewData;
     }
 }

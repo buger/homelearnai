@@ -52,8 +52,7 @@ class FlashcardFactoryTest extends TestCase
     {
         $flashcard = Flashcard::factory()->make();
 
-        $this->assertNotNull($flashcard->unit_id);
-        $this->assertNull($flashcard->topic_id); // Default should be null
+        $this->assertNotNull($flashcard->topic_id); // Default creates with topic
         $this->assertContains($flashcard->card_type, Flashcard::getCardTypes());
         $this->assertContains($flashcard->difficulty_level, Flashcard::getDifficultyLevels());
         $this->assertTrue($flashcard->is_active);
@@ -95,30 +94,26 @@ class FlashcardFactoryTest extends TestCase
             $this->assertEquals($this->unit->id, $flashcard->unit_id);
         }
 
-        $this->assertEquals(3, $this->topic->fresh()->getFlashcardsCount());
+        $this->assertEquals(3, $this->topic->fresh()->flashcards()->count());
     }
 
-    public function test_for_unit_factory_method(): void
+    public function test_flashcard_must_belong_to_topic(): void
     {
-        $flashcard = Flashcard::factory()->forUnit($this->unit)->create();
+        // In the new architecture, all flashcards must belong to a topic
+        $flashcard = Flashcard::factory()->forTopic($this->topic)->create();
 
-        $this->assertNull($flashcard->topic_id);
-        $this->assertEquals($this->unit->id, $flashcard->unit_id);
+        $this->assertNotNull($flashcard->topic_id);
+        $this->assertEquals($this->topic->id, $flashcard->topic_id);
+        $this->assertEquals($this->unit->id, $flashcard->unit_id); // Derived from topic
     }
 
-    public function test_for_unit_factory_method_creates_multiple(): void
+    public function test_flashcard_cannot_exist_without_topic(): void
     {
-        $flashcards = Flashcard::factory()->count(2)->forUnit($this->unit)->create();
+        // Test that flashcards cannot be created without a topic_id
+        $this->expectException(\Exception::class);
 
-        $this->assertCount(2, $flashcards);
-
-        foreach ($flashcards as $flashcard) {
-            $this->assertNull($flashcard->topic_id);
-            $this->assertEquals($this->unit->id, $flashcard->unit_id);
-        }
-
-        $this->assertEquals(2, $this->unit->fresh()->getDirectFlashcardsCount());
-        $this->assertEquals(0, $this->unit->fresh()->getTopicFlashcardsCount());
+        // This should fail because topic_id is required
+        Flashcard::factory()->create(['topic_id' => null]);
     }
 
     // ==================== Combined Factory State Methods ====================
@@ -191,7 +186,7 @@ class FlashcardFactoryTest extends TestCase
         $this->assertFalse($inactiveCard->is_active);
 
         // Test that topic only shows active flashcards
-        $this->assertEquals(1, $this->topic->fresh()->getFlashcardsCount());
+        $this->assertEquals(1, $this->topic->fresh()->flashcards()->where('is_active', true)->count());
     }
 
     public function test_for_topic_with_tags_state(): void
@@ -246,8 +241,8 @@ class FlashcardFactoryTest extends TestCase
         $basicCards = Flashcard::factory()->count(2)->forTopic($this->topic)->basic()->create();
         $mcCards = Flashcard::factory()->count(3)->forTopic($topic2)->multipleChoice()->create();
 
-        $this->assertEquals(2, $this->topic->fresh()->getFlashcardsCount());
-        $this->assertEquals(3, $topic2->fresh()->getFlashcardsCount());
+        $this->assertEquals(2, $this->topic->fresh()->flashcards()->count());
+        $this->assertEquals(3, $topic2->fresh()->flashcards()->count());
 
         foreach ($basicCards as $card) {
             $this->assertEquals($this->topic->id, $card->topic_id);
@@ -326,7 +321,7 @@ class FlashcardFactoryTest extends TestCase
         $endTime = microtime(true);
 
         $this->assertCount(100, $flashcards);
-        $this->assertEquals(100, $this->topic->fresh()->getFlashcardsCount());
+        $this->assertEquals(100, $this->topic->fresh()->flashcards()->count());
 
         // Performance should be reasonable (under 2 seconds for 100 cards)
         $this->assertLessThan(2.0, $endTime - $startTime);
@@ -362,6 +357,6 @@ class FlashcardFactoryTest extends TestCase
             $this->assertEquals('Answer '.($index + 1), $card->answer);
         }
 
-        $this->assertEquals(5, $this->topic->fresh()->getFlashcardsCount());
+        $this->assertEquals(5, $this->topic->fresh()->flashcards()->count());
     }
 }

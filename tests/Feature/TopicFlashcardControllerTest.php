@@ -110,10 +110,15 @@ class TopicFlashcardControllerTest extends TestCase
 
         $this->assertDatabaseHas('flashcards', [
             'topic_id' => $this->topic->id,
-            'unit_id' => $this->unit->id,
             'question' => 'What is photosynthesis?',
             'answer' => 'The process by which plants make food',
         ]);
+
+        // Verify unit_id is computed correctly from topic relationship
+        $flashcard = Flashcard::where('topic_id', $this->topic->id)
+            ->where('question', 'What is photosynthesis?')
+            ->first();
+        $this->assertEquals($this->unit->id, $flashcard->unit_id);
     }
 
     public function test_store_topic_flashcard_denies_access_to_other_users(): void
@@ -163,8 +168,9 @@ class TopicFlashcardControllerTest extends TestCase
         // Create flashcards for this topic
         Flashcard::factory()->count(3)->forTopic($this->topic)->create();
 
-        // Create flashcards for the unit (not topic) - should not be included
-        Flashcard::factory()->count(2)->forUnit($this->unit)->create();
+        // Create flashcards for different topic - should not be included
+        $otherTopic = Topic::factory()->create(['unit_id' => $this->unit->id]);
+        Flashcard::factory()->count(2)->forTopic($otherTopic)->create();
 
         $response = $this->getJson("/api/topics/{$this->topic->id}/flashcards");
 
@@ -365,14 +371,12 @@ class TopicFlashcardControllerTest extends TestCase
                 'flashcard' => [
                     'id' => $flashcard->id,
                     'topic_id' => $targetTopic->id,
-                    'unit_id' => $this->unit->id,
                 ],
             ]);
 
         $this->assertDatabaseHas('flashcards', [
             'id' => $flashcard->id,
             'topic_id' => $targetTopic->id,
-            'unit_id' => $this->unit->id,
         ]);
     }
 
@@ -387,21 +391,19 @@ class TopicFlashcardControllerTest extends TestCase
             'unit_id' => $this->unit->id,
         ]);
 
-        $response->assertStatus(200)
+        $response->assertStatus(422)
             ->assertJson([
-                'success' => true,
-                'message' => 'Flashcard moved successfully',
-                'flashcard' => [
-                    'id' => $flashcard->id,
-                    'topic_id' => null,
-                    'unit_id' => $this->unit->id,
+                'error' => 'Validation failed',
+                'messages' => [
+                    'topic_id' => [
+                        'The topic id field is required.',
+                    ],
                 ],
             ]);
 
         $this->assertDatabaseHas('flashcards', [
             'id' => $flashcard->id,
-            'topic_id' => null,
-            'unit_id' => $this->unit->id,
+            'topic_id' => $this->topic->id, // Should remain in original topic
         ]);
     }
 
@@ -462,10 +464,12 @@ class TopicFlashcardControllerTest extends TestCase
         $this->actingAs($this->user);
 
         $topicFlashcard = Flashcard::factory()->forTopic($this->topic)->create();
-        $unitFlashcard = Flashcard::factory()->forUnit($this->unit)->create(); // Different context
+        // Create flashcard for different topic - should not be updatable in this context
+        $otherTopic = Topic::factory()->create(['unit_id' => $this->unit->id]);
+        $otherTopicFlashcard = Flashcard::factory()->forTopic($otherTopic)->create();
 
         $response = $this->patchJson("/api/topics/{$this->topic->id}/flashcards/bulk-status", [
-            'flashcard_ids' => [$topicFlashcard->id, $unitFlashcard->id],
+            'flashcard_ids' => [$topicFlashcard->id, $otherTopicFlashcard->id],
             'is_active' => false,
         ]);
 
@@ -477,31 +481,32 @@ class TopicFlashcardControllerTest extends TestCase
 
     // ==================== Mixed Unit and Topic Scenarios ====================
 
-    public function test_unit_and_topic_flashcards_are_separate_contexts(): void
+    public function test_different_topics_flashcards_are_separate_contexts(): void
     {
         $this->actingAs($this->user);
 
-        // Create flashcards in both contexts
-        $unitFlashcards = Flashcard::factory()->count(2)->forUnit($this->unit)->create();
+        // Create flashcards in different topics within the same unit
+        $otherTopic = Topic::factory()->create(['unit_id' => $this->unit->id]);
+        $otherTopicFlashcards = Flashcard::factory()->count(2)->forTopic($otherTopic)->create();
         $topicFlashcards = Flashcard::factory()->count(3)->forTopic($this->topic)->create();
 
-        // Test unit endpoint only returns unit flashcards
-        $unitResponse = $this->getJson("/api/units/{$this->unit->id}/flashcards");
-        $unitResponse->assertStatus(200)->assertJsonCount(2, 'flashcards');
-
-        // Test topic endpoint only returns topic flashcards
+        // Test topic endpoint only returns flashcards for that specific topic
         $topicResponse = $this->getJson("/api/topics/{$this->topic->id}/flashcards");
         $topicResponse->assertStatus(200)->assertJsonCount(3, 'flashcards');
 
-        // Verify proper context in responses
-        $unitFlashcardsData = $unitResponse->json('flashcards');
-        foreach ($unitFlashcardsData as $flashcard) {
-            $this->assertNull($flashcard['topic_id']);
-        }
+        // Test other topic endpoint returns different flashcards
+        $otherTopicResponse = $this->getJson("/api/topics/{$otherTopic->id}/flashcards");
+        $otherTopicResponse->assertStatus(200)->assertJsonCount(2, 'flashcards');
 
+        // Verify proper context in responses - both should have topic_id (no unit-only flashcards)
         $topicFlashcardsData = $topicResponse->json('flashcards');
         foreach ($topicFlashcardsData as $flashcard) {
             $this->assertEquals($this->topic->id, $flashcard['topic_id']);
+        }
+
+        $otherTopicFlashcardsData = $otherTopicResponse->json('flashcards');
+        foreach ($otherTopicFlashcardsData as $flashcard) {
+            $this->assertEquals($otherTopic->id, $flashcard['topic_id']);
         }
     }
 

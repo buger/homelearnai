@@ -42,6 +42,7 @@ class Flashcard extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'unit_id',
         'topic_id',
         'card_type',
         'question',
@@ -64,6 +65,7 @@ class Flashcard extends Model
      * The attributes that should be cast.
      */
     protected $casts = [
+        'unit_id' => 'integer',
         'topic_id' => 'integer',
         'choices' => 'array',
         'correct_choices' => 'array',
@@ -150,11 +152,12 @@ class Flashcard extends Model
     }
 
     /**
-     * Get the unit through the topic relationship.
+     * Get the unit that owns the flashcard.
+     * This can be either direct (for backward compatibility) or through topic.
      */
-    public function unit()
+    public function unit(): BelongsTo
     {
-        return $this->topic->unit ?? null;
+        return $this->belongsTo(Unit::class);
     }
 
     /**
@@ -163,14 +166,6 @@ class Flashcard extends Model
     public function subject()
     {
         return $this->topic->unit->subject ?? null;
-    }
-
-    /**
-     * Get the unit_id through the topic relationship for backward compatibility.
-     */
-    public function getUnitIdAttribute(): ?int
-    {
-        return $this->topic?->unit_id;
     }
 
     /**

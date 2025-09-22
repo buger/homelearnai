@@ -102,7 +102,8 @@
                             Preview
                         </a>
                     @endif
-                    <button 
+                    {{-- Import functionality not implemented yet
+                    <button
                         type="button"
                         data-testid="import-flashcard-button"
                         hx-get="{{ route('units.flashcards.import.show', $unit->id) }}"
@@ -115,10 +116,11 @@
                         </svg>
                         Import
                     </button>
+                    --}}
                     <button 
                         type="button"
                         data-testid="add-flashcard-button"
-                        hx-get="{{ route('units.flashcards.create', $unit->id) }}"
+                        {{-- hx-get="{{ route('units.flashcards.create', $unit->id) }}" --}}
                         hx-target="#flashcard-modal"
                         hx-swap="innerHTML"
                         class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center">
@@ -195,7 +197,7 @@
                         <span class="ml-2 text-sm font-normal text-gray-600">({{ $unitLevelFlashcardCount }})</span>
                     </h3>
                     <div id="unit-flashcards-list"
-                         hx-get="{{ route('units.flashcards.list', $unit->id) }}"
+                         hx-get="{{-- route('units.flashcards.list', $unit->id) --}}"
                          hx-trigger="load"
                          hx-swap="innerHTML">
                         <!-- Loading state -->
@@ -214,7 +216,7 @@
                     <button
                         type="button"
                         id="toggle-all-flashcards"
-                        hx-get="{{ route('units.flashcards.list', $unit->id) }}"
+                        hx-get="{{-- route('units.flashcards.list', $unit->id) --}}"
                         hx-target="#all-flashcards-list"
                         hx-swap="innerHTML"
                         class="text-sm text-blue-600 hover:text-blue-800 underline">

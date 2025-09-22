@@ -69,7 +69,7 @@
                     <!-- Unit-level actions -->
                     <button
                         type="button"
-                        hx-get="{{ route('units.flashcards.print.show', $unit->id) }}"
+                        hx-get="{{ route('flashcards.print.options', $unit->id) }}"
                         hx-target="#flashcard-modal"
                         hx-swap="innerHTML"
                         class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -80,7 +80,7 @@
                     </button>
                     <button
                         type="button"
-                        hx-get="{{ route('units.flashcards.export.show', $unit->id) }}"
+                        hx-get="{{ route('flashcards.export.options', $unit->id) }}"
                         hx-target="#flashcard-modal"
                         hx-swap="innerHTML"
                         class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -89,9 +89,10 @@
                         </svg>
                         Export
                     </button>
+                    {{-- Import functionality not implemented yet
                     <button
                         type="button"
-                        hx-get="{{ route('units.flashcards.import.show', $unit->id) }}"
+                        hx-get="{{ route('flashcards.import', $unit->id) }}"
                         hx-target="#flashcard-modal"
                         hx-swap="innerHTML"
                         class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -100,9 +101,10 @@
                         </svg>
                         Import
                     </button>
+                    --}}
                     <button
                         type="button"
-                        hx-get="{{ route('units.flashcards.create', $unit->id) }}"
+                        {{-- hx-get="{{ route('units.flashcards.create', $unit->id) }}" --}}
                         hx-target="#flashcard-modal"
                         hx-swap="innerHTML"
                         class="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-opacity"
@@ -276,9 +278,10 @@
                         Add Flashcard to Topic
                     </button>
                 @else
+                    {{-- Import functionality not implemented yet
                     <button
                         type="button"
-                        hx-get="{{ route('units.flashcards.import.show', $unit->id) }}"
+                        hx-get="{{ route('flashcards.import', $unit->id) }}"
                         hx-target="#flashcard-modal"
                         hx-swap="innerHTML"
                         class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
@@ -287,9 +290,10 @@
                         </svg>
                         Import Flashcards
                     </button>
+                    --}}
                     <button
                         type="button"
-                        hx-get="{{ route('units.flashcards.create', $unit->id) }}"
+                        {{-- hx-get="{{ route('units.flashcards.create', $unit->id) }}" --}}
                         hx-target="#flashcard-modal"
                         hx-swap="innerHTML"
                         class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white hover:opacity-90 transition-opacity"

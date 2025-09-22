@@ -36,8 +36,7 @@ class FlashcardPreviewController extends Controller
         try {
 
             // Get active flashcards for this unit
-            $flashcards = $unit->flashcards()
-                ->where('is_active', true)
+            $flashcards = $unit->allFlashcards()
                 ->orderBy('created_at')
                 ->get();
 

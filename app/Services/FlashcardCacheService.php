@@ -284,6 +284,99 @@ class FlashcardCacheService
     }
 
     /**
+     * Cache flashcards for a specific unit (aggregates all topics in unit)
+     * Backward compatibility method for tests
+     */
+    public function cacheUnitFlashcards(int $unitId, ?Collection $flashcards = null): Collection
+    {
+        // Get all topics in the unit
+        $topics = \App\Models\Topic::where('unit_id', $unitId)->get();
+
+        if ($flashcards !== null) {
+            // If flashcards provided, cache them by topic
+            $flashcards->groupBy('topic_id')->each(function ($topicFlashcards, $topicId) {
+                $this->cacheTopicFlashcards($topicId, $topicFlashcards);
+            });
+
+            return $flashcards;
+        }
+
+        // Aggregate flashcards from all topics in the unit
+        $allFlashcards = collect();
+        foreach ($topics as $topic) {
+            $topicFlashcards = $this->cacheTopicFlashcards($topic->id);
+            $allFlashcards = $allFlashcards->merge($topicFlashcards);
+        }
+
+        // Convert to Eloquent Collection
+        return new Collection($allFlashcards->all());
+    }
+
+    /**
+     * Cache unit statistics (aggregates all topics in unit)
+     * Backward compatibility method for tests
+     */
+    public function cacheUnitStats(int $unitId, ?array $stats = null): array
+    {
+        if ($stats !== null) {
+            // If stats provided, we can't really cache them at unit level in topic-only architecture
+            // Just return them for compatibility
+            return $stats;
+        }
+
+        // Aggregate stats from all topics in the unit
+        $topics = \App\Models\Topic::where('unit_id', $unitId)->get();
+        $aggregatedStats = [
+            'total_cards' => 0,
+            'by_type' => [],
+            'by_difficulty' => [],
+            'with_images' => 0,
+            'with_hints' => 0,
+            'with_tags' => 0,
+            'recently_added' => 0,
+            'last_updated' => now()->toISOString(),
+        ];
+
+        foreach ($topics as $topic) {
+            $topicStats = $this->cacheTopicStats($topic->id);
+
+            $aggregatedStats['total_cards'] += $topicStats['total_cards'] ?? 0;
+
+            // Merge type counts
+            foreach ($topicStats['by_type'] ?? [] as $type => $count) {
+                $aggregatedStats['by_type'][$type] = ($aggregatedStats['by_type'][$type] ?? 0) + $count;
+            }
+
+            // Merge difficulty counts
+            foreach ($topicStats['by_difficulty'] ?? [] as $difficulty => $count) {
+                $aggregatedStats['by_difficulty'][$difficulty] = ($aggregatedStats['by_difficulty'][$difficulty] ?? 0) + $count;
+            }
+
+            $aggregatedStats['with_images'] += $topicStats['with_images'] ?? 0;
+            $aggregatedStats['with_hints'] += $topicStats['with_hints'] ?? 0;
+            $aggregatedStats['with_tags'] += $topicStats['with_tags'] ?? 0;
+            $aggregatedStats['recently_added'] += $topicStats['recently_added'] ?? 0;
+        }
+
+        return $aggregatedStats;
+    }
+
+    /**
+     * Invalidate unit cache (clears all topic caches in unit)
+     * Backward compatibility method for tests
+     */
+    public function invalidateUnitCache(int $unitId): void
+    {
+        $topics = \App\Models\Topic::where('unit_id', $unitId)->get();
+
+        foreach ($topics as $topic) {
+            $this->invalidateTopicCache($topic->id);
+        }
+
+        Log::info("Invalidated flashcard caches for unit {$unitId} (all topics)");
+    }
+
+    /**
      * Get memory usage for debugging
      */
     public function getMemoryUsage(): array

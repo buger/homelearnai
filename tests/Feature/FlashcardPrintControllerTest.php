@@ -34,24 +34,21 @@ class FlashcardPrintControllerTest extends TestCase
         $this->subject = Subject::factory()->create(['user_id' => $this->user->id]);
         $this->unit = Unit::factory()->create(['subject_id' => $this->subject->id]);
 
-        // Create test flashcards
+        // Create test flashcards using forUnit() for backward compatibility
         $this->flashcards = collect([
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'card_type' => 'basic',
                 'question' => 'What is 2 + 2?',
                 'answer' => '4',
             ]),
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'card_type' => 'multiple_choice',
                 'question' => 'Which is the largest planet?',
                 'answer' => 'Jupiter',
                 'choices' => ['Earth', 'Jupiter', 'Saturn', 'Mars'],
                 'correct_choices' => [1],
             ]),
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'card_type' => 'true_false',
                 'question' => 'The sun is a star.',
                 'answer' => 'True',
@@ -307,8 +304,7 @@ class FlashcardPrintControllerTest extends TestCase
     {
         // Create more flashcards to test pagination
         for ($i = 4; $i <= 55; $i++) {
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'card_type' => 'basic',
                 'question' => "Question {$i}",
                 'answer' => "Answer {$i}",
@@ -408,8 +404,7 @@ class FlashcardPrintControllerTest extends TestCase
     {
         // Create 100 flashcards to test performance
         for ($i = 4; $i <= 100; $i++) {
-            Flashcard::factory()->create([
-                'unit_id' => $this->unit->id,
+            Flashcard::factory()->forUnit($this->unit)->create([
                 'card_type' => 'basic',
                 'question' => "Performance test question {$i}",
                 'answer' => "Performance test answer {$i}",
@@ -437,8 +432,7 @@ class FlashcardPrintControllerTest extends TestCase
     public function test_handles_special_characters_in_pdf(): void
     {
         // Create flashcard with special characters
-        Flashcard::factory()->create([
-            'unit_id' => $this->unit->id,
+        Flashcard::factory()->forUnit($this->unit)->create([
             'card_type' => 'basic',
             'question' => 'What is the formula for water? H₂O & other symbols: ñáéíóú',
             'answer' => 'H₂O (dihydrogen monoxide) — it\'s essential for life!',

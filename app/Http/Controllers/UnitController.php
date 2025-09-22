@@ -195,7 +195,7 @@ class UnitController extends Controller
                 return redirect()->route('subjects.show', $subjectId)->with('error', 'Unit not found.');
             }
 
-            $topics = $unitModel->topics;
+            $topics = $unitModel->topics()->with('flashcards')->get();
 
             if ($request->header('HX-Request')) {
                 return view('units.partials.unit-details', [

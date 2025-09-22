@@ -179,7 +179,7 @@
 <script>
 function toggleBulkSelection() {
     // Load bulk selection interface via HTMX
-    htmx.ajax('GET', '{{ route('units.flashcards.export.bulk', $unit->id) }}', {
+    htmx.ajax('GET', '{{ route('flashcards.export.bulk_selection', $unit->id) }}', {
         target: '#export-content',
         swap: 'innerHTML'
     });
@@ -188,7 +188,7 @@ function toggleBulkSelection() {
 function previewExport() {
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '{{ route('units.flashcards.export.preview', $unit->id) }}';
+    form.action = '{{ route('flashcards.export.preview', $unit->id) }}';
     
     // Add CSRF token
     const csrfInput = document.createElement('input');
