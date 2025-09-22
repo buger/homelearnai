@@ -964,25 +964,27 @@ class FlashcardController extends Controller
     /**
      * Display flashcards list view for HTMX.
      */
-    public function listView(Request $request, int $unitId): View|Response
+    public function listView(Request $request, int $topicId): View|Response
     {
         try {
             if (! auth()->check()) {
                 return response('Unauthorized', 401);
             }
 
-            // Verify unit exists and user has access
-            $unit = Unit::with(['subject'])->findOrFail($unitId);
-            if ((int) $unit->subject->user_id !== auth()->id()) {
+            // Verify topic exists and user has access
+            $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
+            if ((int) $topic->unit->subject->user_id !== auth()->id()) {
                 return response('Access denied', 403);
             }
 
             // Get flashcards with pagination
-            $flashcards = $unit->allFlashcards()
+            $flashcards = $topic->flashcards()
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
 
-            return view('flashcards.partials.flashcard-list', compact('flashcards', 'unit'));
+            $unit = $topic->unit; // For backward compatibility with the template
+
+            return view('flashcards.partials.flashcard-list', compact('flashcards', 'topic', 'unit'));
 
         } catch (\Exception $e) {
             Log::error('Error fetching flashcards for list view: '.$e->getMessage());
