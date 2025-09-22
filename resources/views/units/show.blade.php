@@ -117,6 +117,21 @@
                         Import
                     </button>
                     --}}
+<<<<<<< HEAD
+=======
+                    <button 
+                        type="button"
+                        data-testid="add-flashcard-button"
+                        {{-- hx-get="{{ route('units.flashcards.create', $unit->id) }}" --}}
+                        hx-target="#flashcard-modal"
+                        hx-swap="innerHTML"
+                        class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        Add Flashcard
+                    </button>
+>>>>>>> origin/main
                 </div>
             @endunless
         </div>
@@ -176,6 +191,7 @@
                 </div>
             @endif
 
+<<<<<<< HEAD
             <!-- Unit-level Flashcards are no longer supported (Topic-only architecture) -->
 
             <!-- All Flashcards View (from all topics) -->
@@ -185,6 +201,45 @@
                     <div class="text-sm text-gray-600">
                         Flashcards are organized by topics. Click "View Topic" above to see flashcards for specific topics.
                     </div>
+=======
+            <!-- Unit-level Flashcards -->
+            @php $unitLevelFlashcardCount = $unit->getDirectFlashcardsCount() @endphp
+            @if($unitLevelFlashcardCount > 0)
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">
+                        Unit-level Flashcards
+                        <span class="ml-2 text-sm font-normal text-gray-600">({{ $unitLevelFlashcardCount }})</span>
+                    </h3>
+                    <div id="unit-flashcards-list"
+                         hx-get="{{-- route('units.flashcards.list', $unit->id) --}}"
+                         hx-trigger="load"
+                         hx-swap="innerHTML">
+                        <!-- Loading state -->
+                        <div class="text-center py-8">
+                            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                            <p class="mt-2 text-sm text-gray-500">{{ __('Loading flashcards...') }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- All Flashcards View Toggle -->
+            <div class="border-t pt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">All Flashcards</h3>
+                    <button
+                        type="button"
+                        id="toggle-all-flashcards"
+                        hx-get="{{-- route('units.flashcards.list', $unit->id) --}}"
+                        hx-target="#all-flashcards-list"
+                        hx-swap="innerHTML"
+                        class="text-sm text-blue-600 hover:text-blue-800 underline">
+                        Show All Flashcards
+                    </button>
+                </div>
+                <div id="all-flashcards-list" class="hidden">
+                    <!-- Will be populated when toggled -->
+>>>>>>> origin/main
                 </div>
             </div>
         </div>
