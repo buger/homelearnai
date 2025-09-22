@@ -143,6 +143,10 @@ Route::middleware('auth')->group(function () {
     // Calendar and ICS import
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/calendar/create', [CalendarController::class, 'create'])->name('calendar.create');
+    Route::post('/calendar', [CalendarController::class, 'store'])->name('calendar.store');
+    Route::get('/calendar/{id}/edit', [CalendarController::class, 'edit'])->name('calendar.edit');
+    Route::put('/calendar/{id}', [CalendarController::class, 'update'])->name('calendar.update');
+    Route::delete('/calendar/{id}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
     Route::get('/calendar/import', [IcsImportController::class, 'index'])->name('calendar.import');
     Route::post('/calendar/import/file', [IcsImportController::class, 'importFile'])->name('calendar.import.file');
     Route::post('/calendar/import/url', [IcsImportController::class, 'importUrl'])->name('calendar.import.url');
