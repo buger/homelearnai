@@ -134,7 +134,7 @@
           @foreach(['fixed' => __('fixed'), 'preferred' => __('preferred'), 'flexible' => __('flexible')] as $type => $label)
             @if($type !== $session->commitment_type)
             <button
-              hx-put="{{ route('planning.sessions.commitment-type', $session->id) }}"
+              hx-patch="{{ route('planning.sessions.commitment-type', $session->id) }}"
               hx-vals='{"commitment_type": "{{ $type }}"}'
               hx-target="closest .session-card"
               hx-swap="outerHTML"
