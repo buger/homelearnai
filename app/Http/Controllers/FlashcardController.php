@@ -1021,6 +1021,102 @@ class FlashcardController extends Controller
     }
 
     /**
+     * Show the form for creating a new flashcard for a specific topic.
+     */
+    public function createForTopic(Request $request, int $topicId): View|Response
+    {
+        try {
+            if (! auth()->check()) {
+                return response('Unauthorized', 401);
+            }
+
+            // Verify topic exists and user has access
+            $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
+            if ((int) $topic->unit->subject->user_id !== auth()->id()) {
+                return response('Access denied', 403);
+            }
+
+            return view('flashcards.partials.flashcard-modal', [
+                'unit' => $topic->unit,
+                'topic' => $topic,
+                'flashcard' => null, // Creating new
+                'isEdit' => false,
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response('Topic not found', 404);
+        } catch (\Exception $e) {
+            Log::error('Error loading topic flashcard creation form: '.$e->getMessage());
+
+            return response('Unable to load form', 500);
+        }
+    }
+
+    /**
+     * Store a flashcard for a specific topic and return the updated list view.
+     */
+    public function storeForTopic(FlashcardRequest $request, int $topicId): View|Response
+    {
+        try {
+            if (! auth()->check()) {
+                return response('Unauthorized', 401);
+            }
+
+            // Verify topic exists and user has access
+            $topic = Topic::with(['unit.subject'])->findOrFail($topicId);
+            if ((int) $topic->unit->subject->user_id !== auth()->id()) {
+                return response('Access denied', 403);
+            }
+
+            $validated = $request->validated();
+            \Log::info('Topic flashcard validation data:', $validated);
+
+            // Ensure topic_id is set for topic-only architecture
+            $validated['topic_id'] = $topicId;
+
+            $flashcard = new Flashcard($validated);
+
+            // Validate card-specific data
+            $cardErrors = $flashcard->validateCardData();
+            if (! empty($cardErrors)) {
+                return response('<div class="text-red-500">'.implode('<br>', $cardErrors).'</div>', 422);
+            }
+
+            if ($flashcard->save()) {
+                // Return updated topic flashcards list with count update
+                $flashcards = $topic->flashcards()
+                    ->where('is_active', true)
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(20);
+
+                $flashcardCount = $topic->flashcards()->count();
+
+                // Include OOB update for the flashcard count in header
+                $unit = $topic->unit;
+                $listView = view('flashcards.partials.flashcard-list', compact('flashcards', 'topic', 'unit'))->render();
+                $countUpdate = '<span class="ml-2 text-sm font-normal text-gray-600" id="topic-flashcard-count" hx-swap-oob="true">('.$flashcardCount.')</span>';
+
+                return response($listView.$countUpdate)
+                    ->header('HX-Trigger', 'flashcardCreated');
+            }
+
+            return response('Failed to create flashcard', 500);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = collect($e->validator->errors()->all())->implode('<br>');
+            \Log::error('Topic flashcard validation errors:', $e->validator->errors()->toArray());
+
+            return response('<div class="text-red-500">'.$errors.'</div>', 422);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response('Topic not found', 404);
+        } catch (\Exception $e) {
+            Log::error('Error creating topic flashcard: '.$e->getMessage());
+
+            return response('Unable to create flashcard', 500);
+        }
+    }
+
+    /**
      * Show the form for editing a flashcard.
      */
     public function edit(Request $request, int $unitId, int $flashcardId): View|Response

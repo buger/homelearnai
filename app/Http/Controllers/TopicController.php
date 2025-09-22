@@ -131,7 +131,7 @@ class TopicController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'title' => 'required|string|max:255',
             'description' => 'nullable|string|max:10000',
             'estimated_minutes' => 'required|integer|min:5|max:480',
             'required' => 'boolean',
@@ -151,7 +151,7 @@ class TopicController extends Controller
             // Use 'name' field but store as 'title' in the model
             $topic = Topic::create([
                 'unit_id' => $unitId,
-                'title' => $validated['name'], // Store name as title
+                'title' => $validated['title'], // Store title as title
                 'description' => $description,
                 'content_format' => $contentFormat,
                 'content_metadata' => $contentMetadata,
@@ -202,7 +202,7 @@ class TopicController extends Controller
             }
 
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'content_format' => 'nullable|in:plain,markdown,html',
                 'estimated_minutes' => 'required|integer|min:5|max:480',
@@ -222,7 +222,7 @@ class TopicController extends Controller
             // Use 'name' field but store as 'title' in the model
             $topic = Topic::create([
                 'unit_id' => $unitId,
-                'title' => $validated['name'], // Store name as title
+                'title' => $validated['title'], // Store title as title
                 'description' => $description,
                 'content_format' => $contentFormat,
                 'content_metadata' => $contentMetadata,
@@ -354,7 +354,7 @@ class TopicController extends Controller
             }
 
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'content_format' => 'nullable|in:plain,markdown,html',
                 'estimated_minutes' => 'required|integer|min:5|max:480',
@@ -373,7 +373,7 @@ class TopicController extends Controller
 
             // Use 'name' field but store as 'title' in the model
             $topic->update([
-                'title' => $validated['name'], // Store name as title
+                'title' => $validated['title'], // Store title as title
                 'description' => $description,
                 'content_format' => $contentFormat,
                 'content_metadata' => $contentMetadata,

@@ -63,7 +63,7 @@ class CompleteWorkflowTest extends TestCase
 
         // Step 3: Create Topic within Unit
         $topicData = [
-            'name' => 'Linear Equations',
+            'title' => 'Linear Equations',
             'description' => 'Solving linear equations with one variable',
             'estimated_minutes' => 45,
             'required' => true,

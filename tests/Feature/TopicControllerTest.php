@@ -153,7 +153,7 @@ class TopicControllerTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->post(route('units.topics.store', $this->unit->id), [
-            'name' => 'New Topic',
+            'title' => 'New Topic',
             'description' => 'Topic description',
             'estimated_minutes' => 30,
             'required' => true,
@@ -175,11 +175,11 @@ class TopicControllerTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->post(route('units.topics.store', $this->unit->id), [
-            'name' => '', // Invalid: empty name
+            'title' => '', // Invalid: empty title
             'estimated_minutes' => 1000, // Invalid: exceeds max
         ]);
 
-        $response->assertSessionHasErrors(['name', 'estimated_minutes']);
+        $response->assertSessionHasErrors(['title', 'estimated_minutes']);
     }
 
     #[Test]
@@ -201,7 +201,7 @@ class TopicControllerTest extends TestCase
         $this->actingAs($this->user);
 
         $response = $this->put(route('topics.update', $this->topic->id), [
-            'name' => 'Updated Topic Title',
+            'title' => 'Updated Topic Title',
             'estimated_minutes' => 45,
             'required' => false,
         ]);

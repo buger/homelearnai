@@ -170,8 +170,8 @@ Route::middleware('auth')->group(function () {
 
     // Topic-scoped flashcard routes (web interface)
     Route::get('/topics/{topicId}/flashcards/list', [FlashcardController::class, 'listView'])->name('topics.flashcards.list');
-    Route::get('/topics/{topicId}/flashcards/create', [FlashcardController::class, 'create'])->name('topics.flashcards.create');
-    Route::post('/topics/{topicId}/flashcards', [FlashcardController::class, 'storeView'])->name('topics.flashcards.store');
+    Route::get('/topics/{topicId}/flashcards/create', [FlashcardController::class, 'createForTopic'])->name('topics.flashcards.create');
+    Route::post('/topics/{topicId}/flashcards', [FlashcardController::class, 'storeForTopic'])->name('topics.flashcards.store');
     Route::get('/topics/{topicId}/flashcards/{flashcardId}', [FlashcardController::class, 'show'])->name('topics.flashcards.show');
     Route::get('/topics/{topicId}/flashcards/{flashcardId}/edit', [FlashcardController::class, 'edit'])->name('topics.flashcards.edit');
     Route::put('/topics/{topicId}/flashcards/{flashcardId}', [FlashcardController::class, 'updateView'])->name('topics.flashcards.update');

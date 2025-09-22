@@ -19,16 +19,18 @@
                 @if(isset($topic) && $flashcard && $flashcard->topic_id)
                     hx-put="{{ route('topics.flashcards.update', [$flashcard->topic_id, $flashcard->id]) }}"
                 @else
-                    hx-put="{{ route('units.flashcards.update', [$unit->id, $flashcard->id]) }}"
+                    {{-- Legacy unit-level flashcard editing no longer supported --}}
+                    data-error="Cannot edit unit-level flashcard without topic context"
                 @endif
             @else
                 @if(isset($topic))
                     hx-post="{{ route('topics.flashcards.store', $topic->id) }}"
                 @else
-                    hx-post="{{ route('units.flashcards.store', $unit->id) }}"
+                    {{-- Unit-level flashcard creation no longer supported --}}
+                    data-error="Cannot create flashcard without topic context"
                 @endif
             @endif
-            hx-target="#flashcards-list"
+            hx-target="{{ isset($topic) ? '#topic-flashcards-list' : '#flashcards-list' }}"
             hx-swap="innerHTML"
             hx-on::before-request="console.log('HTMX: Flashcard form submission starting...', event.detail)"
             hx-on::after-request="console.log('HTMX: Flashcard form submission completed', event.detail); if(event.detail.xhr.status >= 200 && event.detail.xhr.status < 300) { setTimeout(() => { const modal = event.target.closest('.fixed'); if(modal) { console.log('Removing flashcard modal...'); modal.remove(); } }, 100); }"
@@ -41,79 +43,8 @@
                 @method('PUT')
             @endif
 
-            <!-- Topic Selection (when creating from unit level) -->
-            @if(!isset($topic) && !$isEdit)
-                <div class="space-y-2">
-                    <label for="topic_id" class="flex items-center text-sm font-medium text-gray-700">
-                        Topic (Optional)
-                        <x-help-tooltip
-                            title="Topic Assignment"
-                            content="Assign this flashcard to a specific topic within the unit. This helps organize flashcards by learning objectives. You can leave this blank to keep it as a unit-level flashcard."
-                            position="right"
-                            size="md"
-                            trigger="hover"
-                            theme="{{ session('kids_mode', false) ? 'kids' : 'light' }}"
-                        />
-                    </label>
-                    <select name="topic_id" id="topic_id"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="">Unit-level flashcard (no specific topic)</option>
-                        @foreach($unit->topics as $unitTopic)
-                            <option value="{{ $unitTopic->id }}">
-                                {{ $unitTopic->title }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            @elseif($isEdit && !$flashcard->topic_id)
-                <!-- Allow moving unit-level flashcard to a topic -->
-                <div class="space-y-2">
-                    <label for="topic_id" class="flex items-center text-sm font-medium text-gray-700">
-                        Move to Topic (Optional)
-                        <x-help-tooltip
-                            title="Topic Assignment"
-                            content="Move this unit-level flashcard to a specific topic. This helps organize flashcards by learning objectives."
-                            position="right"
-                            size="md"
-                            trigger="hover"
-                            theme="{{ session('kids_mode', false) ? 'kids' : 'light' }}"
-                        />
-                    </label>
-                    <select name="topic_id" id="topic_id"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="">Keep as unit-level flashcard</option>
-                        @foreach($unit->topics as $unitTopic)
-                            <option value="{{ $unitTopic->id }}">
-                                {{ $unitTopic->title }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            @elseif($isEdit && $flashcard->topic_id)
-                <!-- Show current topic and allow changing -->
-                <div class="space-y-2">
-                    <label for="topic_id" class="flex items-center text-sm font-medium text-gray-700">
-                        Topic
-                        <x-help-tooltip
-                            title="Topic Assignment"
-                            content="Change the topic assignment for this flashcard or remove it from the topic to make it a unit-level flashcard."
-                            position="right"
-                            size="md"
-                            trigger="hover"
-                            theme="{{ session('kids_mode', false) ? 'kids' : 'light' }}"
-                        />
-                    </label>
-                    <select name="topic_id" id="topic_id"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="">Move to unit-level (no specific topic)</option>
-                        @foreach($unit->topics as $unitTopic)
-                            <option value="{{ $unitTopic->id }}" {{ $flashcard->topic_id == $unitTopic->id ? 'selected' : '' }}>
-                                {{ $unitTopic->title }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            @elseif(isset($topic))
+            <!-- Topic Assignment (Topic-Only Architecture) -->
+            @if(isset($topic))
                 <!-- Hidden field when creating for specific topic -->
                 <input type="hidden" name="topic_id" value="{{ $topic->id }}">
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
@@ -123,6 +54,18 @@
                         </svg>
                         <span class="text-sm text-blue-800">
                             This flashcard will be assigned to: <strong>{{ $topic->title }}</strong>
+                        </span>
+                    </div>
+                </div>
+            @else
+                <!-- Error state: No topic provided -->
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <div class="flex items-center">
+                        <svg class="w-4 h-4 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="text-sm text-red-800">
+                            <strong>Error:</strong> Flashcards can only be created within topics. Please navigate to a topic first.
                         </span>
                     </div>
                 </div>
@@ -324,11 +267,15 @@
 
 <!-- JavaScript for dynamic form behavior -->
 <script>
-    let choiceCount = 0;
-    
-    // Modal form response is now handled by HTMX events
-    
-    function toggleCardTypeFields(cardType) {
+    // Avoid global variable conflicts by scoping variables but keeping functions global
+    (function() {
+        // Private variables to avoid conflicts
+        let modalChoiceCount = 0;
+
+        // Modal form response is now handled by HTMX events
+
+        // Make functions global so they can be called from HTML
+        window.toggleCardTypeFields = function(cardType) {
         // Hide all card-specific fields
         const fieldGroups = ['basic-fields', 'multiple-choice-fields', 'true-false-fields', 'cloze-fields', 'image-occlusion-fields'];
         fieldGroups.forEach(group => {
@@ -358,84 +305,84 @@
                 document.getElementById('image-occlusion-fields').classList.remove('hidden');
                 break;
         }
-    }
-    
-    function initializeChoices() {
-        const container = document.getElementById('choices-container');
-        container.innerHTML = '';
-        choiceCount = 0;
+        };
+
+        window.initializeChoices = function() {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+            modalChoiceCount = 0;
         
-        @if($flashcard && $flashcard->card_type === 'multiple_choice' && !empty($flashcard->choices))
-            @foreach($flashcard->choices as $index => $choice)
-                addChoice('{{ $choice }}', {{ in_array($index, $flashcard->correct_choices ?? []) ? 'true' : 'false' }});
-            @endforeach
-        @else
-            // Add two default choices
-            addChoice();
-            addChoice();
-        @endif
-    }
-    
-    function addChoice(value = '', isCorrect = false) {
-        const container = document.getElementById('choices-container');
-        const choiceDiv = document.createElement('div');
-        choiceDiv.className = 'flex items-center space-x-2';
-        choiceDiv.innerHTML = `
-            <input type="checkbox" name="correct_choices[]" value="${choiceCount}" ${isCorrect ? 'checked' : ''}
-                   class="text-blue-600 focus:ring-blue-500" title="Mark as correct answer">
-            <input type="text" name="choices[]" value="${value}" placeholder="Choice ${choiceCount + 1}" required
-                   class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-            <button type="button" onclick="removeChoice(this)" 
-                    class="text-red-600 hover:text-red-800 p-1" title="Remove choice"
-                    ${container.children.length <= 1 ? 'style="visibility: hidden;"' : ''}>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-            </button>
-        `;
-        container.appendChild(choiceDiv);
-        choiceCount++;
-        
-        // Ensure at least 2 choices always visible
-        updateChoiceVisibility();
-    }
-    
-    function removeChoice(button) {
-        const container = document.getElementById('choices-container');
-        if (container.children.length > 2) {
-            button.parentElement.remove();
+            @if($flashcard && $flashcard->card_type === 'multiple_choice' && !empty($flashcard->choices))
+                @foreach($flashcard->choices as $index => $choice)
+                    addChoice('{{ $choice }}', {{ in_array($index, $flashcard->correct_choices ?? []) ? 'true' : 'false' }});
+                @endforeach
+            @else
+                // Add two default choices
+                addChoice();
+                addChoice();
+            @endif
+        };
+
+        window.addChoice = function(value = '', isCorrect = false) {
+            const container = document.getElementById('choices-container');
+            const choiceDiv = document.createElement('div');
+            choiceDiv.className = 'flex items-center space-x-2';
+            choiceDiv.innerHTML = `
+                <input type="checkbox" name="correct_choices[]" value="${modalChoiceCount}" ${isCorrect ? 'checked' : ''}
+                       class="text-blue-600 focus:ring-blue-500" title="Mark as correct answer">
+                <input type="text" name="choices[]" value="${value}" placeholder="Choice ${modalChoiceCount + 1}" required
+                       class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <button type="button" onclick="removeChoice(this)"
+                        class="text-red-600 hover:text-red-800 p-1" title="Remove choice"
+                        ${container.children.length <= 1 ? 'style="visibility: hidden;"' : ''}>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            `;
+            container.appendChild(choiceDiv);
+            modalChoiceCount++;
+
+            // Ensure at least 2 choices always visible
             updateChoiceVisibility();
-        }
-    }
-    
-    function updateChoiceVisibility() {
-        const container = document.getElementById('choices-container');
-        const choices = container.children;
-        
-        // Hide/show remove buttons based on choice count
-        Array.from(choices).forEach((choice, index) => {
-            const removeButton = choice.querySelector('button');
-            if (choices.length <= 2) {
-                removeButton.style.visibility = 'hidden';
-            } else {
-                removeButton.style.visibility = 'visible';
+        };
+
+        window.removeChoice = function(button) {
+            const container = document.getElementById('choices-container');
+            if (container.children.length > 2) {
+                button.parentElement.remove();
+                updateChoiceVisibility();
             }
-        });
-    }
-    
-    function generateClozeFromQA() {
-        const question = document.getElementById('question').value;
-        const answer = document.getElementById('answer').value;
-        const clozeTextarea = document.getElementById('cloze_text');
-        
-        if (question && answer) {
-            // Simple cloze generation - replace answer in question with cloze syntax
-            const clozeText = question.replace(new RegExp(answer, 'gi'), '{{' + answer + '}}');
-            clozeTextarea.value = clozeText;
-        } else {
-            alert('Please enter both question and answer first to generate cloze text.');
-        }
-    }
+        };
+
+        window.updateChoiceVisibility = function() {
+            const container = document.getElementById('choices-container');
+            const choices = container.children;
+
+            // Hide/show remove buttons based on choice count
+            Array.from(choices).forEach((choice, index) => {
+                const removeButton = choice.querySelector('button');
+                if (choices.length <= 2) {
+                    removeButton.style.visibility = 'hidden';
+                } else {
+                    removeButton.style.visibility = 'visible';
+                }
+            });
+        };
+
+        window.generateClozeFromQA = function() {
+            const question = document.getElementById('question').value;
+            const answer = document.getElementById('answer').value;
+            const clozeTextarea = document.getElementById('cloze_text');
+
+            if (question && answer) {
+                // Simple cloze generation - replace answer in question with cloze syntax
+                const clozeText = question.replace(new RegExp(answer, 'gi'), '{{' + answer + '}}');
+                clozeTextarea.value = clozeText;
+            } else {
+                alert('Please enter both question and answer first to generate cloze text.');
+            }
+        };
     
     // Initialize form based on current card type
     document.addEventListener('DOMContentLoaded', function() {
@@ -455,4 +402,6 @@
             e.target.remove();
         }
     });
+
+    })(); // End of scoped function
 </script>
