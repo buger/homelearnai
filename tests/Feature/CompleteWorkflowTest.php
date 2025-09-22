@@ -153,7 +153,14 @@ class CompleteWorkflowTest extends TestCase
         // Test topic show route
         $topicShowResponse = $this->get(route('units.topics.show', [$unit->id, $topic->id]));
         $topicShowResponse->assertOk();
-        $topicShowResponse->assertSee('What is the solution to x + 5 = 12?'); // Flashcard should be visible
+
+        // The topic page loads flashcards via HTMX, so check the HTMX attributes are correct
+        $topicShowResponse->assertSee(route('topics.flashcards.list', $topic->id), false); // false = don't escape HTML
+
+        // Also test the flashcard list endpoint directly (what HTMX would call)
+        $flashcardListResponse = $this->get(route('topics.flashcards.list', $topic->id));
+        $flashcardListResponse->assertOk();
+        $flashcardListResponse->assertSee('What is the solution to x + 5 = 12?'); // Flashcard should be visible in list
 
         // Step 7: Test that topic creation route parameters are correct in views
         $unitShowResponse->assertSee(route('topics.create', [$subject->id, $unit->id]));
