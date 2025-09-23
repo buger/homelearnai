@@ -4,10 +4,10 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                 <!-- Subject Color Badge -->
                 <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-4 h-4 rounded-full" style="background-color: {{ $subject->color }}"></div>
-                        <h3 class="text-lg font-semibold text-gray-900">
-                            <a href="{{ route('subjects.show', $subject->id) }}" class="hover:text-blue-600 transition-colors">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: {{ $subject->color }}"></div>
+                        <h3 class="text-lg font-semibold text-gray-900 truncate">
+                            <a href="{{ route('subjects.show', $subject->id) }}" class="hover:text-blue-600 transition-colors block truncate">
                                 {{ $subject->name }}
                             </a>
                         </h3>
@@ -44,7 +44,7 @@
 
                 <!-- Subject Stats -->
                 <div class="text-sm text-gray-600 mb-4">
-                    <p>{{ __('units_count', ['count' => $subject->units()->count()]) }}</p>
+                    <p>{{ trans_choice('messages.units_count', $subject->units()->count(), ['count' => $subject->units()->count()]) }}</p>
                     <p class="text-xs text-gray-500">{{ __('created_date', ['date' => $subject->created_at?->translatedFormat('M j, Y') ?? __('recently')]) }}</p>
                 </div>
 

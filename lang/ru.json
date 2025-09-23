@@ -929,5 +929,8 @@
     "You can set up your homeschool environment using the navigation menu.": "Вы можете настроить среду домашнего обучения, используя навигационное меню.",
     "Failed to skip onboarding": "Не удалось пропустить онбординг",
     "Failed to save language preference": "Не удалось сохранить языковые предпочтения",
-    "Failed to save language preference. You can continue and change it later.": "Не удалось сохранить языковые предпочтения. Вы можете продолжить и изменить их позже."
+    "Failed to save language preference. You can continue and change it later.": "Не удалось сохранить языковые предпочтения. Вы можете продолжить и изменить их позже.",
+    "catchup_lane": "Пропущенные занятия",
+    "no_catchup_sessions": "Нет пропущенных занятий",
+    "skipped_sessions_appear_here": "Пропущенные сессии появляются здесь"
 }

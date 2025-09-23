@@ -14,8 +14,8 @@
                     <div class="flex items-center space-x-3">
                         <div class="w-6 h-6 rounded-full" style="background-color: {{ $subject->color }}"></div>
                         <div>
-                            <h1 class="text-2xl font-bold text-gray-900">{{ $subject->name }}</h1>
-                            <p class="text-sm text-gray-600 mt-1">{{ $units->count() }} {{ __('units') }}</p>
+                            <h1 class="text-2xl font-bold text-gray-900 whitespace-nowrap">{{ $subject->name }}</h1>
+                            <p class="text-sm text-gray-600 mt-1">{{ trans_choice('messages.units_count', $units->count(), ['count' => $units->count()]) }}</p>
                         </div>
                     </div>
                 </div>
@@ -32,7 +32,7 @@
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                         </svg>
-                        {{ __('Add Unit') }}
+                        {{ __('add_unit') }}
                     </button>
                     <button 
                         type="button"
@@ -43,7 +43,7 @@
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                         </svg>
-                        {{ __('Edit Subject') }}
+                        {{ __('edit_subject') }}
                     </button>
                 </div>
             </div>
