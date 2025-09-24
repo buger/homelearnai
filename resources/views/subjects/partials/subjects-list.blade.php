@@ -44,7 +44,7 @@
 
                 <!-- Subject Stats -->
                 <div class="text-sm text-gray-600 mb-4">
-                    <p>{{ trans_choice('messages.units_count', $subject->units()->count(), ['count' => $subject->units()->count()]) }}</p>
+                    <p>{{ trans_choice('messages.units_count', $subject->units_count, ['count' => $subject->units_count]) }}</p>
                     <p class="text-xs text-gray-500">{{ __('created_date', ['date' => $subject->created_at?->translatedFormat('M j, Y') ?? __('recently')]) }}</p>
                 </div>
 

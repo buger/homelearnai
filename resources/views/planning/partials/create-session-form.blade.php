@@ -37,13 +37,9 @@
           >
             <option value="">{{ __('choose_a_topic') }}</option>
             @foreach($availableTopics as $topic)
-              @php
-                $unit = $topic->unit;
-                $subject = $unit ? $unit->subject : null;
-              @endphp
               <option value="{{ $topic->id }}" data-minutes="{{ $topic->estimated_minutes }}">
                 {{ $topic->title }}
-                @if($subject) ({{ $subject->name }}) @endif
+                @if($topic->unit && $topic->unit->subject) ({{ $topic->unit->subject->name }}) @endif
                 - {{ $topic->estimated_minutes }} min
               </option>
             @endforeach

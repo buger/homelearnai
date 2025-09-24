@@ -39,7 +39,7 @@ class SubjectController extends Controller
 
             // Get subjects for the selected child or show empty state
             if ($selectedChild) {
-                $subjects = $selectedChild->subjects()->orderBy('name')->get();
+                $subjects = $selectedChild->subjects()->withCount('units')->orderBy('name')->get();
             } else {
                 $subjects = collect([]);
             }
