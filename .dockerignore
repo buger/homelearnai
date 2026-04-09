@@ -1,0 +1,53 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Dependencies (rebuilt in Docker)
+node_modules
+vendor
+
+# Build artifacts (rebuilt in Docker)
+public/build
+public/hot
+
+# Environment files (injected at runtime)
+.env
+.env.*
+!.env.example
+
+# IDE & editor files
+.idea
+.vscode
+.fleet
+.nova
+.zed
+.phpactor.json
+.editorconfig
+
+# Testing
+tests/
+test-results/
+playwright-report/
+phpunit.xml
+playwright.config.js
+.phpunit.cache
+.phpunit.result.cache
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# CI/CD
+.github
+.claude
+.husky
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log
+debug-*
+cookies.txt
+supabase/

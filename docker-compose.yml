@@ -1,0 +1,96 @@
+# =============================================================================
+# HomeLearn AI - Docker Compose
+# =============================================================================
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose up -d --build  # Rebuild and start
+#   docker compose logs -f app    # Tail app logs
+#   docker compose down -v        # Stop and remove volumes
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: homelearnai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-homelearnai}
+      POSTGRES_USER: ${DB_USERNAME:-homelearnai}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_EXTERNAL_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-homelearnai} -d ${DB_DATABASE:-homelearnai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - homelearnai
+
+  # ---------------------------------------------------------------------------
+  # Laravel Application (nginx + php-fpm via supervisord)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: homelearnai-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      # --- App ---
+      APP_NAME: ${APP_NAME:-HomeLearnAI}
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY:-}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_LOCALE: ${APP_LOCALE:-en}
+
+      # --- Database (points to the db service) ---
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-homelearnai}
+      DB_USERNAME: ${DB_USERNAME:-homelearnai}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+
+      # --- Session / Cache / Queue ---
+      SESSION_DRIVER: ${SESSION_DRIVER:-database}
+      CACHE_STORE: ${CACHE_STORE:-database}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+
+      # --- Supabase (stub — not required for core functionality) ---
+      SUPABASE_URL: ${SUPABASE_URL:-http://localhost}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-placeholder}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-placeholder}
+
+      # --- Logging ---
+      LOG_CHANNEL: ${LOG_CHANNEL:-stderr}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # --- Mail ---
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - app-storage:/var/www/html/storage
+    networks:
+      - homelearnai
+
+volumes:
+  pgdata:
+    driver: local
+  app-storage:
+    driver: local
+
+networks:
+  homelearnai:
+    driver: bridge
