@@ -6,3 +6,6 @@
 [x-cloak] {
     display: none !important;
 }
+
+/* RTL (Right-to-Left) support for Hebrew, Arabic, etc. */
+@import './rtl.css';
